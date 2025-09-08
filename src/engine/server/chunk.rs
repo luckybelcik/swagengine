@@ -18,6 +18,14 @@ impl Chunk {
     }
 
     pub fn set_block(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, new_block: Block) {
+        if layer == LayerType::Background && new_block.block_type != BlockType::Wall {
+            println!("Attempted to place non-wall block in wall layer");
+            return;
+        } else if layer != LayerType::Background && new_block.block_type == BlockType::Wall {
+            println!("Attempted to place wall block in non-wall layer");
+            return;
+        }
+        
         let array: &mut [Block; 4096] = self.get_layer_mutable(layer);
 
         array[chunk_relative_pos.y * 64 + chunk_relative_pos.x] = new_block;
