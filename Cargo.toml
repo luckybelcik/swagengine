@@ -11,3 +11,5 @@ winit = { version = "0.30.8", features = ["android-native-activity"] }
 sysinfo = "0.35.2"
 bitflags = "2.9.2"
 hecs = "0.10.5"
+dashmap = "6.1.0"
+rayon = "1.11.0"

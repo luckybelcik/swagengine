@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::engine::{common::{ChunkRelativePos, EntityID, PlayerID}, server::common::{Block, BlockType, LayerType}};
+use crate::engine::{common::ChunkRelativePos, components::alive::{EntityID, PlayerID}, server::common::{Block, BlockType, LayerType}};
 
 pub struct Chunk {
     foreground: [Block; 4096],

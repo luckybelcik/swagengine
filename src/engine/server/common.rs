@@ -9,7 +9,7 @@ pub enum BlockType {
 /*  
 /   The texture_index is used for connections in the tile and wall type,
 /   different textures for each tile in the sprite type, and like
-/   idk what in the tile entity type lol i gotta find some use we cant
+/   idk what in the tile entity type lol i gotta find some use
 */ 
 
 pub struct Block {

@@ -1,3 +1,5 @@
+use crate::engine::components::alive::AliveComponents;
+
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
@@ -38,12 +40,4 @@ impl ChunkRelativePos {
             y,
         }
     }
-}
-
-pub struct PlayerID {
-    pub id: u32,
-}
-
-pub struct EntityID {
-    pub id: u32,
 }

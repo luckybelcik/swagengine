@@ -4,3 +4,4 @@ pub mod util;
 pub mod commands;
 pub mod common;
 pub mod server;
+pub mod components;
