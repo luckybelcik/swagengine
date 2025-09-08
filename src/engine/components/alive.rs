@@ -10,6 +10,7 @@ pub struct EntityID {
     pub id: u32,
 }
 
+#[derive(PartialEq, Eq, Hash)]
 pub struct AliveTaskKey {
     pub key: u64,
 }

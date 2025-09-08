@@ -1,3 +1,4 @@
+#[derive(Debug, PartialEq)]
 pub enum BlockType {
     Air,
     Tile,
@@ -21,6 +22,7 @@ pub struct Block {
 
 // The fore and middle ground never have walls, while the background has only walls
 
+#[derive(Debug, PartialEq)]
 pub enum LayerType {
     Foreground,
     Middleground,
