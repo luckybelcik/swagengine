@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use crate::engine::{common::ChunkRelativePos, components::alive::{EntityID, PlayerID}, server::common::{Block, BlockType, LayerType}};
+use fastnoise_lite::FastNoiseLite;
+
+use crate::engine::{common::{ChunkRelativePos, IVec2}, components::alive::{EntityID, PlayerID}, server::common::{Block, BlockType, LayerType}};
 
 pub struct Chunk {
     foreground: [Block; 4096],
@@ -12,6 +14,35 @@ pub struct Chunk {
 }
 
 impl Chunk {
+    pub fn generate_chunk(noise: &FastNoiseLite, position: &IVec2) -> Chunk {
+        let mut foreground = [Block::basic_air(); 4096];
+        let chunk_world_x: usize = (position.x * 64) as usize;
+        let chunk_world_y: usize = (position.y * 64) as usize;
+
+        for i in 0..foreground.len() {
+            let x = i % 64;
+            let y = i / 64;
+
+            let noise = noise.get_noise_2d((x + chunk_world_x) as f32, (y + chunk_world_y) as f32);
+            let block_id = (((noise + 1.0) * 16.0) as u16);
+
+            foreground[i] = Block {
+                block_type: (BlockType::Tile),
+                block_id: block_id,
+                texture_index: (0),
+                damage: (0)
+            }
+        }
+
+        return Chunk { 
+            foreground: ([Block::basic_tile(); 4096]),
+            middleground: ([Block::basic_air(); 4096]),
+            background: ([Block::basic_wall(); 4096]),
+            players: (HashSet::new()),
+            entites: (HashSet::new())
+        }
+    }
+
     pub fn get_block(&self, chunk_relative_pos: ChunkRelativePos, layer: LayerType) -> &Block {
         let array: &[Block; 4096] = self.get_layer_immutable(layer);
         return &array[chunk_relative_pos.y * 64 + chunk_relative_pos.x];

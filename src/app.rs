@@ -1,4 +1,4 @@
-use crate::engine::{commands::{self, DebugCommand}, state::State, time::Time};
+use crate::engine::{commands::{self, DebugCommand}, server::server::Server, state::State, time::Time};
 use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::{ActiveEventLoop}, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
 use crate::engine::util::{AppConfig};
@@ -9,6 +9,7 @@ pub struct App {
     console_listener: Receiver<String>,
     pub app_config: AppConfig,
     pub command_registry: HashMap<&'static str, DebugCommand>,
+    pub server: Option<Server>,
 }
 
 impl App {
@@ -19,6 +20,7 @@ impl App {
             console_listener: listener,
             app_config: AppConfig::default(),
             command_registry: commands::build_registry(),
+            server: None,
         }
     }
 }
@@ -32,6 +34,7 @@ impl ApplicationHandler for App {
         let state = pollster::block_on(State::new(window.clone()));
         self.state = Some(state);
         window.request_redraw();
+        App::on_launch(self);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -76,7 +79,12 @@ impl ApplicationHandler for App {
         if redraw_requested {
             self.time.update();
             self.on_handle_command();
-            self.on_tick(self.time.delta_time());
+            match &mut self.server {
+                Some(server) => {
+                    App::on_tick(self.time.delta_time(), server);
+                },
+                None => {},
+            }
             self.on_update_frame();
             self.on_render();
             if let Some(state) = &mut self.state {
@@ -91,8 +99,14 @@ impl ApplicationHandler for App {
 }
 
 impl App {
-    fn on_tick(&mut self, _delta_time: f32) {
-        // Logic update here
+    fn on_launch(&mut self) {
+        self.server = Some(Server::start_server());
+    }
+    
+    fn on_tick(_delta_time: f32, server: &mut Server) {
+        for dimension in server.dimensions.values_mut() {
+            dimension.load_chunks();
+        }
     }
 
     fn on_update_frame(&mut self) {
