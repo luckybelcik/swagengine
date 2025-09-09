@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{App};
+use crate::{engine::server::{server::Server, world::Dimension}, App};
 use sysinfo::{System};
 
 #[derive(Eq, PartialEq, Hash)]
@@ -105,6 +105,62 @@ fn create_commands() -> Vec<DebugCommand> {
         }
     });
 
+    commands.push(DebugCommand {
+        name: "dimensions",
+        aliases: &["dims"],
+        description: "Returns all dimension names.",
+        execute: |_app, _args| {
+            let Some(server) = &_app.server else {
+            error_server_not_started();
+            return;
+            };
+
+            let keys = server.get_dimension_keys();
+            for key in keys {
+                println!("{}", key);
+            }
+        }
+    });
+
+    commands.push(DebugCommand {
+        name: "testchunkspeed",
+        aliases: &["tcs"],
+        description: "Generates chunks for 5 seconds then returns the count. The first argument is the dimension you want to test for, the second is an optional argument the controls how many chunks to generate.",
+        execute: |_app: &mut App, _args: &[&str]| {
+            let Some(server) = &mut _app.server else {
+                error_server_not_started();
+                return;
+            };
+        
+            let Some(dimension_arg) = _args.first() else {
+                error_not_enough_arguments();
+                return;
+            };
+
+            let Some(dimension) = server.get_dimension(dimension_arg) else {
+                error_dimension_not_found();
+                return;
+            };
+
+            let mut chunk_limit: u32 = 10000;
+            if let Some(arg) = _args.get(1) {
+                match arg.parse::<u32>() {
+                    Ok(limit) => chunk_limit = limit,
+                    Err(_) => {
+                        error_wrong_type();
+                        return;
+                    }
+                }
+            } else {
+                println!("No limit provided, defaulting to {chunk_limit}");
+            }
+
+            let duration: std::time::Duration = dimension.chunk_load_speed_test(chunk_limit);
+            let millis: u128 = duration.as_millis();
+            println!("Generated {chunk_limit} chunks in {millis} milliseconds");
+        }
+    });
+
     return commands;
 }
 
@@ -191,4 +247,12 @@ fn error_not_enough_arguments() {
 
 fn error_command_not_found() {
     println!("Failed to execute command - the command you were looking for could not be found.")
+}
+
+fn error_dimension_not_found() {
+    println!("Failed to execute command - the dimension you were looking for could not be found.")
+}
+
+fn error_server_not_started() {
+    println!("Failed to execute command - the server has not been started.")
 }
