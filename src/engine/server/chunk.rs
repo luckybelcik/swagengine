@@ -2,12 +2,12 @@ use std::collections::HashSet;
 
 use fastnoise_lite::FastNoiseLite;
 
-use crate::engine::{common::{ChunkRelativePos, IVec2}, components::alive::{EntityID, PlayerID}, server::common::{Block, BlockType, LayerType}};
+use crate::engine::{common::{ChunkRelativePos, IVec2}, components::alive::{EntityID, PlayerID}, server::common::{BlockArray, BlockType, LayerType}};
 
 pub struct Chunk {
-    foreground: [Block; 4096],
-    middleground: [Block; 4096],
-    background: [Block; 4096],
+    foreground: BlockArray,
+    middleground: BlockArray,
+    background: BlockArray,
 
     players: HashSet<PlayerID>,
     entites: HashSet<EntityID>,
@@ -15,7 +15,7 @@ pub struct Chunk {
 
 impl Chunk {
     pub fn generate_chunk(noise: &FastNoiseLite, position: &IVec2) -> Chunk {
-        let mut foreground = [Block::basic_air(); 4096];
+        let mut foreground = BlockArray::filled_basic_air();
         let chunk_world_x: usize = (position.x * 64) as usize;
         let chunk_world_y: usize = (position.y * 64) as usize;
 
@@ -24,88 +24,39 @@ impl Chunk {
             let y = i / 64;
 
             let noise = noise.get_noise_2d((x + chunk_world_x) as f32, (y + chunk_world_y) as f32);
-            let block_id = (((noise + 1.0) * 16.0) as u16);
+            let block_id = ((noise + 1.0) * 16.0) as u16;
 
-            foreground[i] = Block {
-                block_type: (BlockType::Tile),
-                block_id: block_id,
-                texture_index: (0),
-                damage: (0)
-            }
+            foreground.set_block_id_byindex(i, block_id);
         }
 
         return Chunk { 
             foreground: (foreground),
-            middleground: ([Block::basic_air(); 4096]),
-            background: ([Block::basic_wall(); 4096]),
+            middleground: (BlockArray::filled_basic_air()),
+            background: (BlockArray::filled_basic_wall()),
             players: (HashSet::new()),
             entites: (HashSet::new())
         }
     }
 
-    pub fn get_block(&self, chunk_relative_pos: ChunkRelativePos, layer: LayerType) -> &Block {
-        let array: &[Block; 4096] = self.get_layer_immutable(layer);
-        return &array[chunk_relative_pos.y * 64 + chunk_relative_pos.x];
-    }
-
-    pub fn set_block(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, new_block: Block) {
-        if layer == LayerType::Background && new_block.block_type != BlockType::Wall {
-            println!("Attempted to place non-wall block in wall layer");
-            return;
-        } else if layer != LayerType::Background && new_block.block_type == BlockType::Wall {
-            println!("Attempted to place wall block in non-wall layer");
-            return;
-        }
-        
-        let array: &mut [Block; 4096] = self.get_layer_mutable(layer);
-
-        array[chunk_relative_pos.y * 64 + chunk_relative_pos.x] = new_block;
-    }
-
-    pub fn clear_block(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType) {
-        let array: &mut [Block; 4096] = self.get_layer_mutable(layer);
-        
-        let index: usize = chunk_relative_pos.y * 64 + chunk_relative_pos.x;
-
-        let block: &mut Block = &mut array[index];
-        
-        match block.block_type {
-            BlockType::Tile => {
-                array[index].block_type = BlockType::Air;
-            }
-            BlockType::Sprite => {
-                panic!("Sprite clearing not implemented yet");
-            }
-            BlockType::TileEntity => {
-                panic!("TileEntity clearing not implemented yet");
-            }
-            _ => {
-                return;
-            }
-        }
-    }
-
     // evil almost-duplicate functions (they're {slightly} more performant and offer better sightreading)
 
-    pub fn change_block_property_damage(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, new_type: BlockType) {
-        let array: &mut [Block; 4096] = self.get_layer_mutable(layer);
-
-        array[chunk_relative_pos.y * 64 + chunk_relative_pos.x].block_type = new_type;
+    pub fn change_block_property_type(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, new_type: BlockType) {
+        self.get_block_array_mut(layer).set_block_type(chunk_relative_pos, new_type);
     }
 
     pub fn change_block_property_id(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, new_id: u16) {
-        let array: &mut [Block; 4096] = self.get_layer_mutable(layer);
-
-        array[chunk_relative_pos.y * 64 + chunk_relative_pos.x].block_id = new_id;
+        self.get_block_array_mut(layer).set_block_id(chunk_relative_pos, new_id);
     }
 
     pub fn change_block_property_texture_index(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, new_texture_index: u8) {
-        let array: &mut [Block; 4096] = self.get_layer_mutable(layer);
-
-        array[chunk_relative_pos.y * 64 + chunk_relative_pos.x].texture_index = new_texture_index;
+        self.get_block_array_mut(layer).set_block_texture_index(chunk_relative_pos, new_texture_index);
     }
 
-    fn get_layer_mutable(&mut self, layer: LayerType) -> &mut [Block; 4096] {
+    pub fn change_block_property_damage(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, damage: u8) {
+        self.get_block_array_mut(layer).set_block_damage(chunk_relative_pos, damage);
+    }
+
+    fn get_block_array_mut(&mut self, layer: LayerType) -> &mut BlockArray {
         match layer {
             LayerType::Foreground => {
                 return &mut self.foreground;
@@ -119,7 +70,7 @@ impl Chunk {
         }
     }
 
-    fn get_layer_immutable(&self, layer: LayerType) -> &[Block; 4096] {
+    fn get_block_array_immut(&self, layer: LayerType) -> &BlockArray {
         match layer {
             LayerType::Foreground => {
                 return &self.foreground;
