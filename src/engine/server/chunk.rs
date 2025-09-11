@@ -35,7 +35,7 @@ impl Chunk {
         }
 
         return Chunk { 
-            foreground: ([Block::basic_tile(); 4096]),
+            foreground: (foreground),
             middleground: ([Block::basic_air(); 4096]),
             background: ([Block::basic_wall(); 4096]),
             players: (HashSet::new()),
