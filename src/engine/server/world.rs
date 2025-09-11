@@ -79,8 +79,6 @@ impl Dimension {
     }
 
     pub fn chunk_load_speed_test(&self, chunk_limit: u32) -> Duration {
-        println!("Starting chunk generation test");
-
         let start_time = Instant::now();
         let mut chunks_generated = 0;
         let mut chunk_pos = IVec2::new(0, 0);
@@ -105,7 +103,6 @@ impl Dimension {
             }
         }
 
-        println!("Finished!");
         return start_time.elapsed();
     }
 }

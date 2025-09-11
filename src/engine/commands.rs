@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{engine::server::{server::Server, world::Dimension}, App};
+use crate::{App};
 use sysinfo::{System};
 
 #[derive(Eq, PartialEq, Hash)]
@@ -125,7 +125,7 @@ fn create_commands() -> Vec<DebugCommand> {
     commands.push(DebugCommand {
         name: "testchunkspeed",
         aliases: &["tcs"],
-        description: "Generates chunks for 5 seconds then returns the count. The first argument is the dimension you want to test for, the second is an optional argument the controls how many chunks to generate.",
+        description: "Generates chunks for 5 seconds then returns the count.",
         execute: |_app: &mut App, _args: &[&str]| {
             let Some(server) = &mut _app.server else {
                 error_server_not_started();
@@ -155,9 +155,33 @@ fn create_commands() -> Vec<DebugCommand> {
                 println!("No limit provided, defaulting to {chunk_limit}");
             }
 
-            let duration: std::time::Duration = dimension.chunk_load_speed_test(chunk_limit);
-            let millis: u128 = duration.as_millis();
-            println!("Generated {chunk_limit} chunks in {millis} milliseconds");
+            let mut test_count: u32 = 1;
+            if let Some(arg) = _args.get(2) {
+                match arg.parse::<u32>() {
+                    Ok(count) => test_count = count,
+                    Err(_) => {
+                        error_wrong_type();
+                        return;
+                    }
+                }
+            } else {
+                println!("No test loop count provided, defaulting to {test_count}");
+            }
+
+            let mut millis: u128 = 0;
+
+            if test_count <= 0 {
+                test_count = 1;
+            }
+
+            for _ in 0..test_count {
+                let duration: std::time::Duration = dimension.chunk_load_speed_test(chunk_limit);
+                millis += duration.as_millis();
+            }
+
+            millis = millis / test_count as u128;
+
+            println!("Generated {chunk_limit} chunks in an average of {millis} milliseconds ({test_count} tests averaged)");
         }
     });
 
