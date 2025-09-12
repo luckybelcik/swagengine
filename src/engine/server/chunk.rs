@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use fastnoise_lite::FastNoiseLite;
+use noise_functions::{Noise, OpenSimplex2};
 
-use crate::engine::{common::{ChunkRelativePos, IVec2}, components::alive::{EntityID, PlayerID}, server::common::{BlockArray, BlockType, LayerType}};
+use crate::engine::{common::{ChunkRelativePos, IVec2}, components::alive::{EntityID, PlayerID}, server::{common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
 
 pub struct Chunk {
     foreground: BlockArray,
@@ -14,24 +14,34 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn generate_chunk(noise: &FastNoiseLite, position: &IVec2) -> Chunk {
+    pub fn generate_chunk(position: &IVec2) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
-        let chunk_world_x: usize = (position.x * 64) as usize;
-        let chunk_world_y: usize = (position.y * 64) as usize;
+        let mut middleground = BlockArray::filled_basic_air();
+        let chunk_world_x: usize = (position.x * CHUNK_SIZE as i32) as usize;
+        let chunk_world_y: usize = (position.y * CHUNK_SIZE as i32) as usize;
 
-        for i in 0..foreground.len() {
-            let x = i % 64;
-            let y = i / 64;
+        for i in 0..CHUNK_BLOCK_COUNT {
+            let x = i % CHUNK_SIZE;
+            let y = i / CHUNK_SIZE;
 
-            let noise = noise.get_noise_2d((x + chunk_world_x) as f32, (y + chunk_world_y) as f32);
-            let block_id = ((noise + 1.0) * 16.0) as u16;
+            // Foreground sampling
 
-            foreground.set_block_id_byindex(i, block_id);
+            let fg_noise = OpenSimplex2.sample3([(x + chunk_world_x) as f32, (y + chunk_world_y) as f32, 0.0]);
+            let fg_block_id = ((fg_noise + 1.0) * 16.0) as u16;
+
+            foreground.set_block_id_byindex(i, fg_block_id);
+
+            // Middleground sampling
+
+            let mg_noise = OpenSimplex2.sample3([(x + chunk_world_x) as f32, (y + chunk_world_y) as f32, 1.0]);
+            let mg_block_id = ((mg_noise + 1.0) * 16.0) as u16;
+
+            middleground.set_block_id_byindex(i, mg_block_id);
         }
 
         return Chunk { 
             foreground: (foreground),
-            middleground: (BlockArray::filled_basic_air()),
+            middleground: (middleground),
             background: (BlockArray::filled_basic_wall()),
             players: (HashSet::new()),
             entites: (HashSet::new())
