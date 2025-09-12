@@ -1,6 +1,5 @@
 use std::{collections::HashMap, time::{Duration, Instant}};
 use dashmap::DashMap;
-use fastnoise_lite::{FastNoiseLite, NoiseType};
 use hecs::World;
 
 use crate::engine::{common::{IVec2}, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::chunk::Chunk};
@@ -14,15 +13,10 @@ pub struct Dimension {
     player_tasks: DashMap<AliveTaskKey, AliveTask>,
     entities: HashMap<EntityID, hecs::Entity>,
     entity_tasks: DashMap<AliveTaskKey, AliveTask>,
-    noise: FastNoiseLite,
 }
 
 impl Dimension {
     pub fn new_basic_dimension() -> Dimension {
-        let mut noise = FastNoiseLite::new();
-        noise.set_noise_type(Some(NoiseType::OpenSimplex2));
-
-
         return Dimension { 
             name: ("basic_dimension".to_string()),
             size: (IVec2 { x: (100), y: (100) }),
@@ -32,7 +26,6 @@ impl Dimension {
             player_tasks: (DashMap::new()),
             entities: (HashMap::new()),
             entity_tasks: (DashMap::new()),
-            noise: noise,
         }
     }
 
@@ -70,7 +63,7 @@ impl Dimension {
         } else if self.chunk_at(&chunk_pos) {
             // println!("Chunk already exists at {:?}", &chunk_pos)
         } else {
-            let chunk: Chunk = Chunk::generate_chunk(&self.noise, &chunk_pos);
+            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos);
             self.chunks.insert(
                 chunk_pos,
                 chunk
@@ -85,7 +78,7 @@ impl Dimension {
         let mut chunks = HashMap::new();
 
         loop {
-            let chunk: Chunk = Chunk::generate_chunk(&self.noise, &chunk_pos);
+            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos);
             chunks_generated += 1;
             chunks.insert(
                 chunk_pos.clone(),

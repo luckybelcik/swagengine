@@ -13,4 +13,5 @@ bitflags = "2.9.2"
 hecs = "0.10.5"
 dashmap = "6.1.0"
 rayon = "1.11.0"
-fastnoise-lite = "1.1.1"
+noise-functions = "0.8.1"
+clap = { version = "4.5.47", features = ["derive"] }
