@@ -1,8 +1,15 @@
 mod app;
 mod engine;
+mod common;
+
+use std::{sync::LazyLock};
 
 use app::App;
 use winit::{event_loop::{EventLoop, ControlFlow}};
+use clap::Parser;
+
+use crate::common::Environment;
+
 
 fn main() {
     env_logger::init();
@@ -26,4 +33,21 @@ fn main() {
     });
 
     event_loop.run_app(&mut app).unwrap();
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// The environment type (e.g., "client", "server", or "both").
+    #[arg(short, long, default_value = "both")]
+    env: Environment,
+}
+
+static ENVIRONMENT: LazyLock<Environment> = LazyLock::new(|| {
+    let args = Args::parse();
+    args.env
+});
+
+pub fn get_environment() -> &'static Environment {
+    &ENVIRONMENT
 }
