@@ -1,4 +1,4 @@
-use crate::engine::{commands::{self, DebugCommand}, server::server::Server, state::State, time::Time};
+use crate::engine::{command_registry::{self, DebugCommand}, server::server::Server, state::State, time::Time};
 use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::{ActiveEventLoop}, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
 use crate::engine::util::{AppConfig};
@@ -19,7 +19,7 @@ impl App {
             time: Time::new(),
             console_listener: listener,
             app_config: AppConfig::default(),
-            command_registry: commands::build_registry(),
+            command_registry: command_registry::build_registry(),
             server: None,
         }
     }
@@ -134,7 +134,7 @@ impl App {
 
     fn on_handle_command(&mut self) {
         while let Ok(cmd) = self.console_listener.try_recv() {
-            commands::handle_command(self, &cmd);
+            command_registry::handle_command(self, &cmd);
         }
     }
 }
