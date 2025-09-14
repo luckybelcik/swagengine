@@ -19,7 +19,7 @@ impl Server {
         }
     }
 
-    pub fn stop_server(&mut self) {
+    pub fn stop(&mut self) {
         println!("Stopping server!");
         // TODO: Nothing here yet, add saving later
         self.running = false;
