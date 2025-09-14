@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{engine::{client::commands::create_client_commands, commands::create_main_commands, server::{commands::create_server_commands, server::Server}}, get_global_command_registry, App};
+use crate::{engine::{client::commands::create_client_commands, commands::create_main_commands, server::{commands::create_server_commands, server::Server}}, App};
 
 #[derive(Eq, PartialEq, Hash, Clone, Copy)]
 pub enum CommandEnvironment {
@@ -14,13 +14,23 @@ pub enum CommandDependency<'a>{
     Main,
 }
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Clone, Copy)]
 pub struct DebugCommand {
     pub name: &'static str,
     pub aliases: &'static [&'static str],
     pub description: &'static str,
-    pub execute: fn(&mut CommandDependency, &[&str]),
+    pub execute: fn(&mut CommandDependency, &Vec<String>),
     pub command_environment: CommandEnvironment,
+}
+
+#[derive(Eq, PartialEq, Hash, Clone)]
+pub struct DebugCommandWithArgs {
+    pub debug_command: DebugCommand,
+    pub command_args: Vec<String>,
+}
+
+pub struct CommandRegistry {
+    pub global_registry: HashMap<&'static str, DebugCommand>,
 }
 
 pub fn build_registry<'a>(environment: CommandEnvironment) -> HashMap<&'static str, DebugCommand> {
@@ -52,52 +62,19 @@ pub fn build_registry<'a>(environment: CommandEnvironment) -> HashMap<&'static s
     return mapped;
 }
 
-pub fn handle_client_command(app: &mut App, input: &str) {
-    let parts: Vec<&str> = input.trim().split_whitespace().collect();
-    if parts.is_empty() {
-        return;
-    }
-
-    let cmd_name = parts[0];
-    let args = &parts[1..];
-
-    if let Some(command) = get_global_command_registry().get(cmd_name) {
-        (command.execute)(&mut CommandDependency::App(app), args);
-    } else {
-        println!("Unknown command. Type 'help' for a list.");
-    }
+pub fn handle_client_command(app: &mut App, command: &DebugCommandWithArgs) {
+    let cmd: DebugCommand = command.debug_command;
+    (cmd.execute)(&mut CommandDependency::App(app), &command.command_args);
 }
 
-pub fn handle_server_command(server: &mut Server, input: &str) {
-    let parts: Vec<&str> = input.trim().split_whitespace().collect();
-    if parts.is_empty() {
-        return;
-    }
-
-    let cmd_name = parts[0];
-    let args = &parts[1..];
-
-    if let Some(command) = get_global_command_registry().get(cmd_name) {
-        (command.execute)(&mut CommandDependency::Server(server), args);
-    } else {
-        println!("Unknown command. Type 'help' for a list.");
-    }
+pub fn handle_server_command(server: &mut Server, command: &DebugCommandWithArgs) {
+    let cmd: DebugCommand = command.debug_command;
+    (cmd.execute)(&mut CommandDependency::Server(server), &command.command_args);
 }
 
-pub fn handle_main_command(app: &mut App, server: &mut Server, input: &str) {
-    let parts: Vec<&str> = input.trim().split_whitespace().collect();
-    if parts.is_empty() {
-        return;
-    }
-
-    let cmd_name = parts[0];
-    let args = &parts[1..];
-
-    if let Some(command) = get_global_command_registry().get(cmd_name) {
-        (command.execute)(&mut CommandDependency::Main, args);
-    } else {
-        println!("Unknown command. Type 'help' for a list.");
-    }
+pub fn handle_main_command(command: &DebugCommandWithArgs) {
+    let cmd: DebugCommand = command.debug_command;
+    (cmd.execute)(&mut CommandDependency::Main, &command.command_args);
 }
 
 pub fn error_wrong_type() {
