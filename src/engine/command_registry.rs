@@ -92,7 +92,3 @@ pub fn error_command_not_found() {
 pub fn error_dimension_not_found() {
     println!("Failed to execute command - the dimension you were looking for could not be found.")
 }
-
-pub fn error_server_not_started() {
-    println!("Failed to execute command - the server has not been started.")
-}
