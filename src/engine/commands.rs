@@ -1,8 +1,8 @@
 use sysinfo::System;
 
-use crate::{app::App, engine::command_registry::{error_command_not_found, error_not_enough_arguments, DebugCommand}};
+use crate::{app::App, engine::command_registry::{error_command_not_found, error_not_enough_arguments, CommandEnvironment, DebugCommand}};
 
-pub fn create_general_commands() -> Vec<DebugCommand> {
+pub fn create_main_commands() -> Vec<DebugCommand> {
     let mut commands = Vec::new();
 
     commands.push(DebugCommand {
@@ -11,7 +11,8 @@ pub fn create_general_commands() -> Vec<DebugCommand> {
         description: "Prints the help menu.",
         execute: |_app, _args| {
             print_debug_menu(_app);
-        }
+        },
+        command_environment: CommandEnvironment::Main,
     });
 
     commands.push(DebugCommand {
@@ -20,7 +21,8 @@ pub fn create_general_commands() -> Vec<DebugCommand> {
         description: "Prints program memory usage.",
         execute: |_app, _args| {
             print_memory_usage();
-        }
+        },
+        command_environment: CommandEnvironment::Main,
     });
 
     commands.push(DebugCommand {
@@ -37,7 +39,8 @@ pub fn create_general_commands() -> Vec<DebugCommand> {
             } else {
                 error_not_enough_arguments();
             }
-        }
+        },
+        command_environment: CommandEnvironment::Main,
     });
 
     commands.push(DebugCommand {
@@ -46,7 +49,8 @@ pub fn create_general_commands() -> Vec<DebugCommand> {
         description: "Kills the process. Warning - just close the window normally if you can.",
         execute: |_app, _args| {
             std::process::exit(0);
-        }
+        },
+        command_environment: CommandEnvironment::Main,
     });
     
     return commands;

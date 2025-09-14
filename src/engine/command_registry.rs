@@ -1,5 +1,12 @@
 use std::collections::HashMap;
-use crate::{common::Environment, engine::{client::{self, commands::create_client_commands}, commands::create_general_commands, server::commands::create_server_commands}, get_environment, App};
+use crate::{common::Environment, engine::{client::{self, commands::create_client_commands}, commands::create_main_commands, server::commands::create_server_commands}, get_environment, App};
+
+#[derive(Eq, PartialEq, Hash, Clone, Copy)]
+pub enum CommandEnvironment {
+    Client,
+    Server,
+    Main,
+}
 
 #[derive(Eq, PartialEq, Hash)]
 pub struct DebugCommand {
@@ -7,11 +14,12 @@ pub struct DebugCommand {
     pub aliases: &'static [&'static str],
     pub description: &'static str,
     pub execute: fn(&mut App, &[&str]),
+    pub command_environment: CommandEnvironment,
 }
 
 pub fn build_registry() -> HashMap<&'static str, DebugCommand> {
     let mut mapped = HashMap::new();
-    let mut commands = create_general_commands();
+    let mut commands = create_main_commands();
 
     match get_environment() {
         Environment::Client => {commands.extend(create_client_commands())},
@@ -26,6 +34,7 @@ pub fn build_registry() -> HashMap<&'static str, DebugCommand> {
                 aliases: cmd.aliases,
                 description: cmd.description,
                 execute: cmd.execute,
+                command_environment: cmd.command_environment,
             });
         }
         mapped.insert(cmd.name, cmd);

@@ -1,4 +1,4 @@
-use crate::{app::App, engine::{command_registry::{error_dimension_not_found, error_not_enough_arguments, error_server_not_started, error_wrong_type, DebugCommand}, server::constants::CHUNK_BLOCK_COUNT}};
+use crate::{app::App, engine::{command_registry::{error_dimension_not_found, error_not_enough_arguments, error_server_not_started, error_wrong_type, CommandEnvironment, DebugCommand}, server::constants::CHUNK_BLOCK_COUNT}};
 
 pub fn create_server_commands() -> Vec<DebugCommand> {
     let mut commands = Vec::new();
@@ -17,7 +17,8 @@ pub fn create_server_commands() -> Vec<DebugCommand> {
             for key in keys {
                 println!("{}", key);
             }
-        }
+        },
+        command_environment: CommandEnvironment::Server,
     });
 
     commands.push(DebugCommand {
@@ -82,7 +83,8 @@ pub fn create_server_commands() -> Vec<DebugCommand> {
             let avg_per_block = (nanos_per_test as f64 / chunk_limit as f64) / CHUNK_BLOCK_COUNT as f64;
             
             println!("Thats {avg_per_chunk}ms per chunk, {avg_per_block}ns per block ({CHUNK_BLOCK_COUNT} blocks in chunk)");
-        }
+        },
+        command_environment: CommandEnvironment::Server,
     });
 
     return commands;

@@ -14,13 +14,13 @@ use crate::{common::Environment, engine::server::{constants::TICK_RATE, server::
 fn main() {
     env_logger::init();
 
-    let (tx_input, rx_input) = std::sync::mpsc::channel::<String>();
+    let (tx_console, rx_console) = std::sync::mpsc::channel::<String>();
     let (tx_server, rx_server) = std::sync::mpsc::channel::<String>();
 
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    let mut app: App = App::new(rx_input, rx_server);
+    let mut app: App = App::new(rx_console, rx_server);
     
     // Spawn the server thread
     std::thread::spawn(move || {
@@ -70,7 +70,7 @@ fn main() {
         for line in stdin.lock().lines() {
             let cmd = line.unwrap().to_lowercase();
 
-            tx_input.send(cmd).unwrap();
+            tx_console.send(cmd).unwrap();
         }
         println!("Terminal input thread shut down");
     });
