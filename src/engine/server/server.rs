@@ -13,6 +13,12 @@ impl Server {
         return Server { dimensions: (starting_dimensions) }
     }
 
+    pub fn on_tick(&mut self) {
+        for dimension in self.dimensions.values_mut() {
+            dimension.load_chunks();
+        }
+    }
+
     pub fn get_dimension(&self, name: &str) -> Option<&Dimension> {
         return self.dimensions.get(name);
     }

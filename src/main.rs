@@ -14,19 +14,20 @@ use crate::{common::{CommandRegistry, Environment}, engine::{command_registry::{
 fn main() {
     env_logger::init();
 
-    let (tx_console, rx_console) = std::sync::mpsc::channel::<String>();
-    let (tx_server, rx_server) = std::sync::mpsc::channel::<String>();
+    let (tx_console_to_client, rx_console_to_client) = std::sync::mpsc::channel::<String>();
+    let (tx_console_to_server, rx_console_to_server) = std::sync::mpsc::channel::<String>();
+    let (tx_server_to_client, rx_server_to_client) = std::sync::mpsc::channel::<String>();
 
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    let mut app: App = App::new(rx_console, rx_server);
+    let mut app: App = App::new(rx_console_to_client, rx_server_to_client);
     
     // Spawn the server thread
-    spawn_server_thread(tx_server);
+    spawn_server_thread(tx_server_to_client);
 
     // Spawn a thread that reads terminal input
-    spawn_console_thread(tx_console);
+    spawn_console_thread(tx_console_to_client);
 
     event_loop.run_app(&mut app).unwrap();
 }
@@ -61,9 +62,7 @@ fn spawn_server_thread(tx: Sender<String>) {
 
         loop {
             // Logic
-            for dimension in server.dimensions.values_mut() {
-                dimension.load_chunks();
-            }
+            server.on_tick();
 
             if ticks % 60 == 0 {
                 println!("60 ticks one second!");
