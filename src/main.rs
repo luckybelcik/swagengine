@@ -2,20 +2,20 @@ mod app;
 mod engine;
 mod common;
 
-use std::{collections::HashMap, sync::{mpsc::Sender, LazyLock}, time::{Duration, Instant}};
+use std::{collections::HashMap, sync::{mpsc::{Receiver, Sender}, LazyLock}, time::{Duration, Instant}};
 
 use app::App;
 use winit::{event_loop::{EventLoop, ControlFlow}};
 use clap::Parser;
 
-use crate::{common::{CommandRegistry, Environment}, engine::{command_registry::{self, CommandEnvironment, DebugCommand}, server::{constants::TICK_RATE, server::Server}}};
+use crate::{common::Environment, engine::{command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, server::{constants::TICK_RATE, server::Server}}};
 
 
 fn main() {
     env_logger::init();
 
-    let (tx_console_to_client, rx_console_to_client) = std::sync::mpsc::channel::<String>();
-    let (tx_console_to_server, rx_console_to_server) = std::sync::mpsc::channel::<String>();
+    let (tx_console_to_client, rx_console_to_client) = std::sync::mpsc::channel::<DebugCommandWithArgs>();
+    let (tx_console_to_server, rx_console_to_server) = std::sync::mpsc::channel::<DebugCommandWithArgs>();
     let (tx_server_to_client, rx_server_to_client) = std::sync::mpsc::channel::<String>();
 
     let event_loop = EventLoop::new().unwrap();
@@ -24,10 +24,10 @@ fn main() {
     let mut app: App = App::new(rx_console_to_client, rx_server_to_client);
     
     // Spawn the server thread
-    spawn_server_thread(tx_server_to_client);
+    spawn_server_thread(tx_server_to_client, rx_console_to_server);
 
     // Spawn a thread that reads terminal input
-    spawn_console_thread(tx_console_to_client);
+    spawn_console_thread(tx_console_to_client, tx_console_to_server);
 
     event_loop.run_app(&mut app).unwrap();
 }
@@ -49,31 +49,28 @@ pub fn get_environment() -> &'static Environment {
     &ENVIRONMENT
 }
 
-fn spawn_server_thread(tx: Sender<String>) {
+fn spawn_server_thread(tx: Sender<String>, rx_console_to_server: Receiver<DebugCommandWithArgs>) {
     std::thread::spawn(move || {
         println!("Server thread spawned");
 
         let tick_duration = Duration::from_micros(1_000_000 / TICK_RATE);
         println!("Game tick loop started at {} TPS.", TICK_RATE);
 
-        let mut server = Server::start_server();
+        let mut server = Server::start_server(rx_console_to_server);
         let mut next_tick = Instant::now();
-        let mut ticks: u128 = 0;
+        let mut _ticks: u128 = 0;
 
         loop {
             // Logic
+            server.process_commands();
             server.on_tick();
-
-            if ticks % 60 == 0 {
-                println!("60 ticks one second!");
-            }
             
             // Send a dummy message to the main thread to show it's ticking
             // Later on, this will be a message with updated game state
             tx.send("tick".to_string()).unwrap();
 
             // Increment tick count
-            ticks += 1;
+            _ticks += 1;
 
             // Sleep until the next tick
             next_tick += tick_duration;
@@ -87,7 +84,7 @@ fn spawn_server_thread(tx: Sender<String>) {
     });
 }
 
-fn spawn_console_thread(tx: Sender<String>) {
+fn spawn_console_thread(tx_to_client: Sender<DebugCommandWithArgs>, tx_to_server: Sender<DebugCommandWithArgs>) {
     std::thread::spawn(move || {
         println!("Terminal input thread spawned");
         use std::io::{self, BufRead};
@@ -95,7 +92,27 @@ fn spawn_console_thread(tx: Sender<String>) {
         for line in stdin.lock().lines() {
             let cmd = line.unwrap().to_lowercase();
 
-            tx.send(cmd).unwrap();
+            let parts: Vec<&str> = cmd.trim().split_whitespace().collect();
+            if parts.is_empty() {
+                continue;
+            }
+
+            let cmd_name = parts[0];
+            let args: Vec<String> = parts[1..].iter().map(|s| s.to_string()).collect();
+
+            if let Some(command) = get_global_command_registry().get(cmd_name).copied() {
+                let cmd = DebugCommandWithArgs {
+                    debug_command: command,
+                    command_args: args,
+                };
+                match command.command_environment {
+                    CommandEnvironment::Client => {tx_to_client.send(cmd).unwrap()},
+                    CommandEnvironment::Server => {tx_to_server.send(cmd).unwrap()},
+                    CommandEnvironment::Main => {command_registry::handle_main_command(&cmd)},
+                }
+            } else {
+                println!("Unknown command. Type 'help' for a list.");
+            }
         }
         println!("Terminal input thread shut down");
     });
