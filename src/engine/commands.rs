@@ -51,7 +51,7 @@ pub fn create_main_commands() -> Vec<DebugCommand> {
         name: "killprocess",
         aliases: &["kill"],
         description: "Kills the process. Warning - just close the window normally if you can.",
-        execute: |_app, _args| {
+        execute: |_client, _args| {
             std::process::exit(0);
         },
         command_environment: CommandEnvironment::Main,
@@ -72,16 +72,15 @@ fn print_debug_menu() {
 
 fn print_memory_usage() {
     let mut sys = System::new_all();
-    sys.refresh_all(); // Refresh system information
+    sys.refresh_all();
 
     if let Some(process) = sys.process(sysinfo::get_current_pid().expect("Failed to get current PID")) {
-        let mem_kb = process.memory(); // Memory in KB (Resident Set Size)
-        let virtual_mem_kb = process.virtual_memory(); // Virtual Memory in KB
+        let mem_mb = process.memory() as f64 / 1_000_000.0;
+        let virtual_mem_kb = process.virtual_memory() as f64 / 1_000_000.0;
 
         println!("Process Memory Usage:");
-        println!("  Resident Set Size (RSS): {} KB (approx. physical RAM used)", mem_kb);
-        println!("  Virtual Memory Size (VSZ): {} KB (total virtual memory mapped)", virtual_mem_kb);
-        // sysinfo might also offer things like 'peak_memory()' depending on version/OS
+        println!("  Resident Set Size (RSS): {} MB (approx. physical RAM used)", mem_mb);
+        println!("  Virtual Memory Size (VSZ): {} MB (total virtual memory mapped)", virtual_mem_kb);
     } else {
         println!("Could not retrieve process memory information.");
     }
