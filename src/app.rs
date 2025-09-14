@@ -1,4 +1,4 @@
-use crate::{engine::{command_registry::{self}, state::State, time::Time}};
+use crate::engine::{command_registry::{self, DebugCommandWithArgs}, state::State, time::Time};
 use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::{ActiveEventLoop}, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{sync::{mpsc::Receiver, Arc}};
 use crate::engine::util::{AppConfig};
@@ -6,13 +6,13 @@ use crate::engine::util::{AppConfig};
 pub struct App {
     state: Option<State>,
     pub time: Time,
-    console_listener: Receiver<String>,
+    console_listener: Receiver<DebugCommandWithArgs>,
     server_listener: Receiver<String>,
     pub app_config: AppConfig,
 }
 
 impl App {
-    pub fn new(console_listener: Receiver<String>, server_listener: Receiver<String>) -> Self {
+    pub fn new(console_listener: Receiver<DebugCommandWithArgs>, server_listener: Receiver<String>) -> Self {
         Self {
             state: None,
             time: Time::new(),
