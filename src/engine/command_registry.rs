@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{engine::{client::commands::create_client_commands, commands::create_main_commands, server::{commands::create_server_commands, server::Server}}, App};
+use crate::engine::{client::{client::Client, commands::create_client_commands}, commands::create_main_commands, server::{commands::create_server_commands, server::Server}};
 
 #[derive(Eq, PartialEq, Hash, Clone, Copy)]
 pub enum CommandEnvironment {
@@ -9,7 +9,7 @@ pub enum CommandEnvironment {
 }
 
 pub enum CommandDependency<'a>{
-    App(&'a mut App),
+    Client(&'a mut Client),
     Server(&'a mut Server),
     Main,
 }
@@ -62,9 +62,9 @@ pub fn build_registry<'a>(environment: CommandEnvironment) -> HashMap<&'static s
     return mapped;
 }
 
-pub fn handle_client_command(app: &mut App, command: &DebugCommandWithArgs) {
+pub fn handle_client_command(client: &mut Client, command: &DebugCommandWithArgs) {
     let cmd: DebugCommand = command.debug_command;
-    (cmd.execute)(&mut CommandDependency::App(app), &command.command_args);
+    (cmd.execute)(&mut CommandDependency::Client(client), &command.command_args);
 }
 
 pub fn handle_server_command(server: &mut Server, command: &DebugCommandWithArgs) {

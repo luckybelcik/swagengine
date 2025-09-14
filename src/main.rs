@@ -1,12 +1,10 @@
-mod app;
 mod engine;
 
 use std::{collections::HashMap, sync::{mpsc::{Receiver, Sender}, LazyLock}, thread::JoinHandle, time::{Duration, Instant}};
 
-use app::App;
 use winit::{event_loop::{EventLoop, ControlFlow}};
 
-use crate::{engine::{command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, server::{constants::TICK_RATE, server::Server}}};
+use crate::engine::{client::client::Client, command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, server::{constants::TICK_RATE, server::Server}};
 
 
 fn main() {
@@ -34,18 +32,18 @@ fn main() {
         }
     }
 
-    // Initialize app and start event loop
+    // Initialize client and start event loop
     #[cfg(feature = "client")]
-    initialize_app(rx_console_to_client, rx_server_to_client);
+    initialize_client(rx_console_to_client, rx_server_to_client);
 }
 
-fn initialize_app(rx_console_to_client: Receiver<DebugCommandWithArgs>, rx_server_to_client: Receiver<String>) {
+fn initialize_client(rx_console_to_client: Receiver<DebugCommandWithArgs>, rx_server_to_client: Receiver<String>) {
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    let mut app: App = App::new(rx_console_to_client, rx_server_to_client);
+    let mut client: Client = Client::new(rx_console_to_client, rx_server_to_client);
 
-    event_loop.run_app(&mut app).unwrap();
+    event_loop.run_app(&mut client).unwrap();
 }
 
 fn spawn_server_thread(tx_server_to_client: Sender<String>, rx_console_to_server: Receiver<DebugCommandWithArgs>) -> JoinHandle<()> {

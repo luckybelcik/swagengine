@@ -1,29 +1,29 @@
 use crate::engine::{command_registry::{self, DebugCommandWithArgs}, state::State, time::Time};
 use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::{ActiveEventLoop}, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{sync::{mpsc::Receiver, Arc}};
-use crate::engine::util::{AppConfig};
+use crate::engine::util::{ClientConfig};
 
-pub struct App {
+pub struct Client {
     state: Option<State>,
     pub time: Time,
     console_listener: Receiver<DebugCommandWithArgs>,
     server_listener: Receiver<String>,
-    pub app_config: AppConfig,
+    pub client_config: ClientConfig,
 }
 
-impl App {
+impl Client {
     pub fn new(console_listener: Receiver<DebugCommandWithArgs>, server_listener: Receiver<String>) -> Self {
         Self {
             state: None,
             time: Time::new(),
             console_listener: console_listener,
             server_listener: server_listener,
-            app_config: AppConfig::default(),
+            client_config: ClientConfig::default(),
         }
     }
 }
 
-impl ApplicationHandler for App {
+impl ApplicationHandler for Client {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let window_attributes = Window::default_attributes()
                 .with_title("swagrarria")
@@ -32,7 +32,7 @@ impl ApplicationHandler for App {
         let state = pollster::block_on(State::new(window.clone()));
         self.state = Some(state);
         window.request_redraw();
-        App::on_launch(self);
+        Client::on_launch(self);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -90,7 +90,7 @@ impl ApplicationHandler for App {
     }
 }
 
-impl App {
+impl Client {
     fn on_launch(&mut self) {
 
     }
