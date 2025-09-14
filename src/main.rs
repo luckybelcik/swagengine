@@ -2,13 +2,13 @@ mod app;
 mod engine;
 mod common;
 
-use std::{sync::LazyLock, time::{Duration, Instant}};
+use std::{collections::HashMap, sync::{mpsc::Sender, LazyLock}, time::{Duration, Instant}};
 
 use app::App;
 use winit::{event_loop::{EventLoop, ControlFlow}};
 use clap::Parser;
 
-use crate::{common::Environment, engine::server::{constants::TICK_RATE, server::Server}};
+use crate::{common::{CommandRegistry, Environment}, engine::{command_registry::{self, CommandEnvironment, DebugCommand}, server::{constants::TICK_RATE, server::Server}}};
 
 
 fn main() {
@@ -23,57 +23,10 @@ fn main() {
     let mut app: App = App::new(rx_console, rx_server);
     
     // Spawn the server thread
-    std::thread::spawn(move || {
-        println!("Server thread spawned");
-
-        let tick_duration = Duration::from_micros(1_000_000 / TICK_RATE);
-        println!("Game tick loop started at {} TPS.", TICK_RATE);
-
-        let mut server = Server::start_server();
-
-        let mut next_tick = Instant::now();
-
-        loop {
-            let mut ticks: u128 = 0;
-            // Logic
-            for dimension in server.dimensions.values_mut() {
-                dimension.load_chunks();
-            }
-
-            if ticks % 60 == 0 {
-                println!("60 ticks one second!");
-            }
-            
-            // Send a dummy message to the main thread to show it's ticking
-            // Later on, this will be a message with updated game state
-            tx_server.send("tick".to_string()).unwrap();
-
-            // Increment tick count
-            ticks += 1;
-
-            // Sleep until the next tick
-            next_tick += tick_duration;
-            let now = Instant::now();
-            if next_tick > now {
-                std::thread::sleep(next_tick - now);
-            } else {
-                next_tick = now + tick_duration;
-            }
-        }
-    });
+    spawn_server_thread(tx_server);
 
     // Spawn a thread that reads terminal input
-    std::thread::spawn(move || {
-        println!("Terminal input thread spawned");
-        use std::io::{self, BufRead};
-        let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            let cmd = line.unwrap().to_lowercase();
-
-            tx_console.send(cmd).unwrap();
-        }
-        println!("Terminal input thread shut down");
-    });
+    spawn_console_thread(tx_console);
 
     event_loop.run_app(&mut app).unwrap();
 }
@@ -93,4 +46,72 @@ static ENVIRONMENT: LazyLock<Environment> = LazyLock::new(|| {
 
 pub fn get_environment() -> &'static Environment {
     &ENVIRONMENT
+}
+
+fn spawn_server_thread(tx: Sender<String>) {
+    std::thread::spawn(move || {
+        println!("Server thread spawned");
+
+        let tick_duration = Duration::from_micros(1_000_000 / TICK_RATE);
+        println!("Game tick loop started at {} TPS.", TICK_RATE);
+
+        let mut server = Server::start_server();
+        let mut next_tick = Instant::now();
+        let mut ticks: u128 = 0;
+
+        loop {
+            // Logic
+            for dimension in server.dimensions.values_mut() {
+                dimension.load_chunks();
+            }
+
+            if ticks % 60 == 0 {
+                println!("60 ticks one second!");
+            }
+            
+            // Send a dummy message to the main thread to show it's ticking
+            // Later on, this will be a message with updated game state
+            tx.send("tick".to_string()).unwrap();
+
+            // Increment tick count
+            ticks += 1;
+
+            // Sleep until the next tick
+            next_tick += tick_duration;
+            let now = Instant::now();
+            if next_tick > now {
+                std::thread::sleep(next_tick - now);
+            } else {
+                next_tick = now + tick_duration;
+            }
+        }
+    });
+}
+
+fn spawn_console_thread(tx: Sender<String>) {
+    std::thread::spawn(move || {
+        println!("Terminal input thread spawned");
+        use std::io::{self, BufRead};
+        let stdin = io::stdin();
+        for line in stdin.lock().lines() {
+            let cmd = line.unwrap().to_lowercase();
+
+            tx.send(cmd).unwrap();
+        }
+        println!("Terminal input thread shut down");
+    });
+}
+
+static COMMAND_REGISTRIES: LazyLock<CommandRegistry> = LazyLock::new(|| {
+    let mut registry = HashMap::new();
+    registry.extend(command_registry::build_registry(CommandEnvironment::Client));
+    registry.extend(command_registry::build_registry(CommandEnvironment::Server));
+    registry.extend(command_registry::build_registry(CommandEnvironment::Main));
+    return CommandRegistry {
+        global_registry: registry,
+    };
+});
+
+pub fn get_global_command_registry<'a>() -> &'a HashMap<&'static str, DebugCommand> {
+    return &COMMAND_REGISTRIES.global_registry;
 }

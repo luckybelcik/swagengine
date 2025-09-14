@@ -1,6 +1,6 @@
-use crate::engine::{command_registry::{self, DebugCommand}, server::server::Server, state::State, time::Time};
+use crate::{engine::{command_registry::{self}, state::State, time::Time}};
 use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::{ActiveEventLoop}, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
+use std::{sync::{mpsc::Receiver, Arc}};
 use crate::engine::util::{AppConfig};
 
 pub struct App {
@@ -9,7 +9,6 @@ pub struct App {
     console_listener: Receiver<String>,
     server_listener: Receiver<String>,
     pub app_config: AppConfig,
-    pub command_registry: HashMap<&'static str, DebugCommand>,
 }
 
 impl App {
@@ -20,7 +19,6 @@ impl App {
             console_listener: console_listener,
             server_listener: server_listener,
             app_config: AppConfig::default(),
-            command_registry: command_registry::build_registry(),
         }
     }
 }
@@ -96,10 +94,6 @@ impl App {
     fn on_launch(&mut self) {
 
     }
-    
-    fn on_tick(_delta_time: f32, server: &mut Server) {
-        
-    }
 
     fn on_update_frame(&mut self) {
         // Input/UI/scripting here
@@ -126,7 +120,7 @@ impl App {
 
     fn on_handle_command(&mut self) {
         while let Ok(cmd) = self.console_listener.try_recv() {
-            command_registry::handle_command(self, &cmd);
+            command_registry::handle_client_command(self, &cmd);
         }
     }
 }

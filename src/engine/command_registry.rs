@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{common::Environment, engine::{client::{self, commands::create_client_commands}, commands::create_main_commands, server::commands::create_server_commands}, get_environment, App};
+use crate::{engine::{client::commands::create_client_commands, commands::create_main_commands, server::{commands::create_server_commands, server::Server}}, get_global_command_registry, App};
 
 #[derive(Eq, PartialEq, Hash, Clone, Copy)]
 pub enum CommandEnvironment {
@@ -8,26 +8,35 @@ pub enum CommandEnvironment {
     Main,
 }
 
+pub enum CommandDependency<'a>{
+    App(&'a mut App),
+    Server(&'a mut Server),
+    Main,
+}
+
 #[derive(Eq, PartialEq, Hash)]
 pub struct DebugCommand {
     pub name: &'static str,
     pub aliases: &'static [&'static str],
     pub description: &'static str,
-    pub execute: fn(&mut App, &[&str]),
+    pub execute: fn(&mut CommandDependency, &[&str]),
     pub command_environment: CommandEnvironment,
 }
 
-pub fn build_registry() -> HashMap<&'static str, DebugCommand> {
+pub fn build_registry<'a>(environment: CommandEnvironment) -> HashMap<&'static str, DebugCommand> {
     let mut mapped = HashMap::new();
-    let mut commands = create_main_commands();
+    let mut commands = Vec::new();
 
-    match get_environment() {
-        Environment::Client => {commands.extend(create_client_commands())},
-        Environment::Server => {commands.extend(create_server_commands())},
-        Environment::Both => {commands.extend(create_client_commands()); commands.extend(create_server_commands())},
+    match environment {
+        CommandEnvironment::Client => {commands.extend(create_client_commands())},
+        CommandEnvironment::Server => {commands.extend(create_server_commands())},
+        CommandEnvironment::Main => {commands.extend(create_main_commands())},
     }
 
     for cmd in commands {
+        if cmd.command_environment != environment {
+            continue;
+        }
         for alias in cmd.aliases {
             mapped.insert(*alias, DebugCommand {
                 name: cmd.name,
@@ -43,7 +52,7 @@ pub fn build_registry() -> HashMap<&'static str, DebugCommand> {
     return mapped;
 }
 
-pub fn handle_command(app: &mut App, input: &str) {
+pub fn handle_client_command(app: &mut App, input: &str) {
     let parts: Vec<&str> = input.trim().split_whitespace().collect();
     if parts.is_empty() {
         return;
@@ -52,8 +61,40 @@ pub fn handle_command(app: &mut App, input: &str) {
     let cmd_name = parts[0];
     let args = &parts[1..];
 
-    if let Some(command) = app.command_registry.get(cmd_name) {
-        (command.execute)(app, args);
+    if let Some(command) = get_global_command_registry().get(cmd_name) {
+        (command.execute)(&mut CommandDependency::App(app), args);
+    } else {
+        println!("Unknown command. Type 'help' for a list.");
+    }
+}
+
+pub fn handle_server_command(server: &mut Server, input: &str) {
+    let parts: Vec<&str> = input.trim().split_whitespace().collect();
+    if parts.is_empty() {
+        return;
+    }
+
+    let cmd_name = parts[0];
+    let args = &parts[1..];
+
+    if let Some(command) = get_global_command_registry().get(cmd_name) {
+        (command.execute)(&mut CommandDependency::Server(server), args);
+    } else {
+        println!("Unknown command. Type 'help' for a list.");
+    }
+}
+
+pub fn handle_main_command(app: &mut App, server: &mut Server, input: &str) {
+    let parts: Vec<&str> = input.trim().split_whitespace().collect();
+    if parts.is_empty() {
+        return;
+    }
+
+    let cmd_name = parts[0];
+    let args = &parts[1..];
+
+    if let Some(command) = get_global_command_registry().get(cmd_name) {
+        (command.execute)(&mut CommandDependency::Main, args);
     } else {
         println!("Unknown command. Type 'help' for a list.");
     }
