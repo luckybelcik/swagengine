@@ -22,7 +22,7 @@ pub fn create_server_commands() -> Vec<DebugCommand> {
         name: "testchunkspeed",
         aliases: &["tcs"],
         description: "Generates chunks for 5 seconds then returns the count.",
-        execute: |dependency, _args: &[&str]| {
+        execute: |dependency, _args| {
             if let CommandDependency::Server(server) = dependency {  
                 let Some(dimension_arg) = _args.first() else {
                     error_not_enough_arguments();

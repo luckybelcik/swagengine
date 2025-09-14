@@ -34,7 +34,7 @@ pub fn create_main_commands() -> Vec<DebugCommand> {
         execute: |dependency, _args| {
             if let CommandDependency::Main = dependency {
                 if let Some(arg) = _args.first() {
-                    if get_global_command_registry().contains_key(arg) {
+                    if get_global_command_registry().contains_key(arg.as_str()) {
                         print_aliases(arg);
                     } else {
                         error_command_not_found();

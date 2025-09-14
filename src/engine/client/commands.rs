@@ -7,7 +7,7 @@ pub fn create_client_commands() -> Vec<DebugCommand> {
         name: "framerate",
         aliases: &["fps"],
         description: "Prints the average framerate. Sampled since program start, or last resetfps execution.",
-        execute: |dependency, _args: &[&str]| {
+        execute: |dependency, _args| {
             if let CommandDependency::App(app) = dependency {
                 println!("Average FPS: {:.2}", app.time.average_fps());
             }
