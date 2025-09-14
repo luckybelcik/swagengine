@@ -3,6 +3,7 @@ use crate::engine::{command_registry::{self, DebugCommandWithArgs}, server::worl
 
 pub struct Server {
     pub dimensions: HashMap<String, Dimension>,
+    running: bool,
     console_listener: Receiver<DebugCommandWithArgs>,
 }
 
@@ -13,8 +14,15 @@ impl Server {
         starting_dimensions.insert(basic_dimension.name.clone(), basic_dimension);
         return Server {
             dimensions: starting_dimensions,
+            running: true,
             console_listener: console_listener,
         }
+    }
+
+    pub fn stop(&mut self) {
+        println!("Stopping server!");
+        // TODO: Nothing here yet, add saving later
+        self.running = false;
     }
 
     pub fn on_tick(&mut self) {
@@ -35,5 +43,9 @@ impl Server {
 
     pub fn get_dimension_keys(&self) -> Keys<'_, String, Dimension> {
         return self.dimensions.keys();
+    }
+
+    pub fn is_running(&self) -> bool {
+        return self.running;
     }
 }

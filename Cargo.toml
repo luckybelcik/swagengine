@@ -3,6 +3,11 @@ name = "WGPU_example"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+client = []
+server = []
+default = ["client", "server"]
+
 [dependencies]
 env_logger = "0.11"
 pollster = "0.4"
@@ -14,4 +19,3 @@ hecs = "0.10.5"
 dashmap = "6.1.0"
 rayon = "1.11.0"
 noise-functions = "0.8.1"
-clap = { version = "4.5.47", features = ["derive"] }

@@ -4,6 +4,18 @@ pub fn create_server_commands() -> Vec<DebugCommand> {
     let mut commands = Vec::new();
 
     commands.push(DebugCommand {
+        name: "stopserver",
+        aliases: &["exitserver"],
+        description: "Stops the server.",
+        execute: |dependency, _args| {
+            if let CommandDependency::Server(server) = dependency {
+                server.stop();
+            }
+        },
+        command_environment: CommandEnvironment::Server,
+    });
+
+    commands.push(DebugCommand {
         name: "dimensions",
         aliases: &["dims"],
         description: "Returns all dimension names.",
