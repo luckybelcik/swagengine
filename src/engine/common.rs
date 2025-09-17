@@ -1,3 +1,4 @@
+use bincode::{Encode, Decode};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::server::common::BlockArray;
@@ -16,15 +17,16 @@ impl ChunkRelativePos {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Encode, Decode, Debug)]
 pub struct ChunkMesh {
     foreground: BlockArray,
     middleground: BlockArray,
     background: BlockArray,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Encode, Decode, Debug)]
 pub enum ServerPacket {
     Ping,
-    ChunkMesh(ChunkMesh)
+    Message(String),
+    ChunkMesh(ChunkMesh),
 }

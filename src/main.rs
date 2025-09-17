@@ -4,7 +4,7 @@ use std::{collections::HashMap, sync::{mpsc::{Receiver, Sender}, LazyLock}, thre
 
 use winit::{event_loop::{EventLoop, ControlFlow}};
 
-use crate::engine::{client::client::Client, command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, server::{constants::TICK_RATE, server::Server}};
+use crate::engine::{client::client::Client, command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, common::ServerPacket, server::{constants::TICK_RATE, server::Server}};
 
 
 fn main() {
@@ -12,7 +12,7 @@ fn main() {
 
     let (tx_console_to_client, rx_console_to_client) = std::sync::mpsc::channel::<DebugCommandWithArgs>();
     let (tx_console_to_server, rx_console_to_server) = std::sync::mpsc::channel::<DebugCommandWithArgs>();
-    let (tx_server_to_client, rx_server_to_client) = std::sync::mpsc::channel::<String>();
+    let (tx_server_to_client, rx_server_to_client) = std::sync::mpsc::channel::<Vec<u8>>();
 
     // Spawn a thread that reads terminal input
     spawn_console_thread(tx_console_to_client, tx_console_to_server);
@@ -37,7 +37,7 @@ fn main() {
     initialize_client(rx_console_to_client, rx_server_to_client);
 }
 
-fn initialize_client(rx_console_to_client: Receiver<DebugCommandWithArgs>, rx_server_to_client: Receiver<String>) {
+fn initialize_client(rx_console_to_client: Receiver<DebugCommandWithArgs>, rx_server_to_client: Receiver<Vec<u8>>) {
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(ControlFlow::Poll);
 
@@ -48,7 +48,7 @@ fn initialize_client(rx_console_to_client: Receiver<DebugCommandWithArgs>, rx_se
     event_loop.run_app(&mut client).unwrap();
 }
 
-fn spawn_server_thread(tx_server_to_client: Sender<String>, rx_console_to_server: Receiver<DebugCommandWithArgs>) -> JoinHandle<()> {
+fn spawn_server_thread(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server: Receiver<DebugCommandWithArgs>) -> JoinHandle<()> {
     return std::thread::spawn(move || {
         println!("Server thread spawned");
 
@@ -56,7 +56,7 @@ fn spawn_server_thread(tx_server_to_client: Sender<String>, rx_console_to_server
     });
 }
 
-fn initialize_server(tx_server_to_client: Sender<String>, rx_console_to_server: Receiver<DebugCommandWithArgs>) {
+fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server: Receiver<DebugCommandWithArgs>) {
     let tick_duration = Duration::from_micros(1_000_000 / TICK_RATE);
     println!("Game tick loop started at {} TPS.", TICK_RATE);
 
@@ -71,7 +71,11 @@ fn initialize_server(tx_server_to_client: Sender<String>, rx_console_to_server: 
         
         // Send a dummy message to the main thread to show it's ticking
         // Later on, this will be a message with updated game state
-        tx_server_to_client.send("tick".to_string()).unwrap();
+        if _ticks % 60 == 0 {
+            let packet = ServerPacket::Message("tick swag $$$ tick swag $$$ tick swag $$$ tick swag".to_string());
+            let serialized_packet: Vec<u8> = bincode::encode_to_vec(packet, bincode::config::standard()).unwrap();
+            let _ = tx_server_to_client.send(serialized_packet);
+        }
 
         // Increment tick count
         _ticks += 1;

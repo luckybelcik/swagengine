@@ -1,4 +1,4 @@
-use crate::engine::{client::state::State, command_registry::{self, DebugCommandWithArgs}, time::Time};
+use crate::engine::{client::state::State, command_registry::{self, DebugCommandWithArgs}, common::ServerPacket, time::Time};
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{sync::{mpsc::Receiver, Arc}};
 
@@ -6,14 +6,14 @@ pub struct Client {
     state: Option<State>,
     pub time: Time,
     console_listener: Receiver<DebugCommandWithArgs>,
-    server_listener: Receiver<String>,
+    server_listener: Receiver<Vec<u8>>,
     pub client_config: ClientConfig,
     player_uuid: u64,
     player_nickname: String,
 }
 
 impl Client {
-    pub fn new(console_listener: Receiver<DebugCommandWithArgs>, server_listener: Receiver<String>) -> Self {
+    pub fn new(console_listener: Receiver<DebugCommandWithArgs>, server_listener: Receiver<Vec<u8>>) -> Self {
         Self {
             state: None,
             time: Time::new(),
@@ -28,6 +28,7 @@ impl Client {
     fn redraw(&mut self) {
         self.time.update();
         self.on_handle_command();
+        self.on_handle_server_packet();
         self.on_update_frame();
         self.on_render();
         if let Some(state) = &mut self.state {
@@ -120,6 +121,24 @@ impl Client {
     fn on_handle_command(&mut self) {
         while let Ok(cmd) = self.console_listener.try_recv() {
             command_registry::handle_client_command(self, &cmd);
+        }
+    }
+
+    fn on_handle_server_packet(&mut self) {
+        while let Ok(raw_packet) = self.server_listener.try_recv() {
+            let (packet, bytes_consumed) = bincode::decode_from_slice(&raw_packet, bincode::config::standard()).unwrap();
+            println!("v Bytes read: {} bytes", bytes_consumed);
+            match packet {
+                ServerPacket::ChunkMesh(mesh) => {
+                    println!("Got mesh!")
+                },
+                ServerPacket::Message(message) => {
+                    println!("Got message {}!", message)
+                },
+                ServerPacket::Ping => {
+                    println!("Got pinged!")
+                }
+            }
         }
     }
     
