@@ -60,7 +60,7 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
     let tick_duration = Duration::from_micros(1_000_000 / TICK_RATE);
     println!("Game tick loop started at {} TPS.", TICK_RATE);
 
-    let mut server = Server::start_server(rx_console_to_server);
+    let mut server = Server::start_server(rx_console_to_server, tx_server_to_client);
     let mut next_tick = Instant::now();
     let mut _ticks: u128 = 0;
 
@@ -72,9 +72,8 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
         // Send a dummy message to the main thread to show it's ticking
         // Later on, this will be a message with updated game state
         if _ticks % 60 == 0 {
-            let packet = ServerPacket::Message("tick swag $$$ tick swag $$$ tick swag $$$ tick swag".to_string());
-            let serialized_packet: Vec<u8> = bincode::encode_to_vec(packet, bincode::config::standard()).unwrap();
-            let _ = tx_server_to_client.send(serialized_packet);
+            let packet = ServerPacket::Message("tick".to_string());
+            server.send_packet(packet);
         }
 
         // Increment tick count
