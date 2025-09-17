@@ -1,4 +1,5 @@
 use bincode::{Encode, Decode};
+use glam::I64Vec2;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::server::common::{BlockArray, BlockType, LayerType};
@@ -19,8 +20,6 @@ impl ChunkRelativePos {
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug)]
 pub struct ChunkMesh {
-    pub x: i32,
-    pub y: i32,
     pub foreground: BlockArray,
     pub middleground: BlockArray,
     pub background: BlockArray,
@@ -28,8 +27,6 @@ pub struct ChunkMesh {
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug)]
 pub struct BlockChange {
-    pub x: i64,
-    pub y: i64,
     pub layer: LayerType,
     pub block_type: BlockType,
     pub block_id: u16,
@@ -39,6 +36,6 @@ pub struct BlockChange {
 pub enum ServerPacket {
     Ping,
     Message(String),
-    BlockChange(BlockChange),
-    ChunkMesh(Box<ChunkMesh>),
+    BlockChange(((i64, i64), BlockChange)),
+    ChunkMesh(((i32, i32), Box<ChunkMesh>)),
 }

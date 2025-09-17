@@ -78,23 +78,19 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
 
             for dimension in server.dimensions.values() {
                 for (position, chunk) in dimension.get_chunks() {
-                    server.send_packet(ServerPacket::ChunkMesh(Box::new(ChunkMesh {
-                        x: position.x,
-                        y: position.y,
+                    server.send_packet(ServerPacket::ChunkMesh(((position.x, position.y), Box::new(ChunkMesh {
                         foreground: chunk.foreground,
                         middleground: chunk.middleground,
                         background: chunk.background,
-                    })));
+                    }))));
                 }
             }
 
-            server.send_packet(ServerPacket::BlockChange(BlockChange {
-                x: 12,
-                y: 34,
+            server.send_packet(ServerPacket::BlockChange(((12, 34), BlockChange {
                 layer: LayerType::Foreground,
                 block_type: BlockType::Tile,
                 block_id: 5,
-            }))
+            })))
         }
 
         // Increment tick count

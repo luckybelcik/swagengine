@@ -1,6 +1,7 @@
-use crate::engine::{client::state::State, command_registry::{self, DebugCommandWithArgs}, common::ServerPacket, time::Time};
+use crate::engine::{client::state::State, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, ServerPacket}, time::Time};
+use glam::IVec2;
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use std::{sync::{mpsc::Receiver, Arc}};
+use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
 
 pub struct Client {
     state: Option<State>,
@@ -10,6 +11,7 @@ pub struct Client {
     pub client_config: ClientConfig,
     player_uuid: u64,
     player_nickname: String,
+    loaded_chunks: HashMap<IVec2, ChunkMesh>,
 }
 
 impl Client {
@@ -22,6 +24,7 @@ impl Client {
             client_config: ClientConfig::default(),
             player_uuid: fastrand::u64(..),
             player_nickname: "playerboy".to_string(),
+            loaded_chunks: HashMap::new(),
         }
     }
 
@@ -130,10 +133,16 @@ impl Client {
             println!("v Bytes read: {} bytes", bytes_consumed);
             match packet {
                 ServerPacket::ChunkMesh(mesh) => {
-                    println!("Got mesh at position {}x {}y!", mesh.x, mesh.y)
+                    let coord = IVec2::new(mesh.0.0, mesh.0.1);
+                    if self.loaded_chunks.contains_key(&coord) {
+                        println!("Got mesh already at {}x {}y!", mesh.0.0, mesh.0.1);
+                    } else {
+                        println!("Got mesh at position {}x {}y!", mesh.0.0, mesh.0.1);
+                        self.loaded_chunks.insert(coord, *mesh.1);
+                    }
                 },
                 ServerPacket::BlockChange(block_change) => {
-                    println!("Got block change at {}x {}y in layer {:?} with blocktype {:?} and block_id {}", block_change.x, block_change.y, block_change.layer, block_change.block_type, block_change.block_id)
+                    println!("Got block change at {}x {}y in layer {:?} with blocktype {:?} and block_id {}", block_change.0.0, block_change.0.1, block_change.1.layer, block_change.1.block_type, block_change.1.block_id)
                 },
                 ServerPacket::Message(message) => {
                     println!("Got message {}!", message)
