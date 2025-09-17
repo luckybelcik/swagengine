@@ -1,5 +1,5 @@
 use crate::engine::{command_registry::{self, DebugCommandWithArgs}, state::State, time::Time};
-use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::{ActiveEventLoop}, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
+use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{sync::{mpsc::Receiver, Arc}};
 use crate::engine::util::{ClientConfig};
 
@@ -25,6 +25,31 @@ impl Client {
             player_nickname: "playerboy".to_string(),
         }
     }
+
+    fn redraw(&mut self) {
+        self.time.update();
+        self.on_handle_command();
+        self.on_update_frame();
+        self.on_render();
+        if let Some(state) = &mut self.state {
+            state.get_window().request_redraw();
+        }
+    }
+
+    fn resize(&mut self, size: &PhysicalSize<u32> ) {
+        if let Some(state) = &mut self.state {
+            // Break early if either sizes are 0 (prevents a crash)
+            if size.height == 0 || size.width == 0 {
+                return;
+            }
+
+            state.resize(*size);
+        }
+    }
+
+    fn close(&self, event_loop: &ActiveEventLoop) {
+        event_loop.exit();
+    }
 }
 
 impl ApplicationHandler for Client {
@@ -40,22 +65,11 @@ impl ApplicationHandler for Client {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        let redraw_requested;
-        let resized_size;
         if let Some(_state) = &mut self.state {
             match &event {
-                WindowEvent::CloseRequested => {
-                    event_loop.exit();
-                    return;
-                }
-                WindowEvent::RedrawRequested => {
-                    redraw_requested = true;
-                    resized_size = None;
-                }
-                WindowEvent::Resized(size) => {
-                    redraw_requested = false;
-                    resized_size = Some(*size);
-                }
+                WindowEvent::CloseRequested => self.close(event_loop),
+                WindowEvent::RedrawRequested => self.redraw(),
+                WindowEvent::Resized(size) => self.resize(size),
                 WindowEvent::KeyboardInput {
                     event:
                         KeyEvent {
@@ -66,34 +80,11 @@ impl ApplicationHandler for Client {
                     ..
                 } => {
                     self.on_key_pressed(*key_code);
-                    redraw_requested = false;
-                    resized_size = None;
                 }
 
                 _ => {
                     return;
                 }
-            }
-        } else {
-            return;
-        }
-
-        if redraw_requested {
-            self.time.update();
-            self.on_handle_command();
-            self.on_update_frame();
-            self.on_render();
-            if let Some(state) = &mut self.state {
-                state.get_window().request_redraw();
-            }
-        } else if let Some(size) = resized_size {
-            if let Some(state) = &mut self.state {
-                // Break early if either sizes are 0 (prevents a crash)
-                if size.height == 0 || size.width == 0 {
-                    return;
-                }
-
-                state.resize(size);
             }
         }
     }
