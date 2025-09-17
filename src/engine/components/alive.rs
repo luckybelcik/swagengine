@@ -1,4 +1,4 @@
-use crate::engine::common::Vec2;
+use glam::Vec2;
 
 const IS_PLAYER_BIT: u64 = 1 << 63;
 
