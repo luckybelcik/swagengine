@@ -21,9 +21,9 @@ impl Chunk {
         let chunk_world_x: usize = (position.x * CHUNK_SIZE as i32) as usize;
         let chunk_world_y: usize = (position.y * CHUNK_SIZE as i32) as usize;
 
-        for i in 0..CHUNK_BLOCK_COUNT {
-            let x = i % CHUNK_SIZE;
-            let y = i / CHUNK_SIZE;
+        for i in 0..CHUNK_BLOCK_COUNT as usize {
+            let x = i % CHUNK_SIZE as usize;
+            let y = i / CHUNK_SIZE as usize;
 
             // Foreground sampling
 

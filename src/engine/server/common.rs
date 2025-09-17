@@ -17,10 +17,10 @@ pub enum BlockType {
 
 #[derive(Debug, Clone, Copy)]
 pub struct BlockArray {
-    pub block_type: [BlockType; CHUNK_BLOCK_COUNT],
-    pub block_id: [u16; CHUNK_BLOCK_COUNT],
-    pub texture_index: [u8; CHUNK_BLOCK_COUNT],
-    pub damage: [u8; CHUNK_BLOCK_COUNT],
+    pub block_type: [BlockType; CHUNK_BLOCK_COUNT as usize],
+    pub block_id: [u16; CHUNK_BLOCK_COUNT as usize],
+    pub texture_index: [u8; CHUNK_BLOCK_COUNT as usize],
+    pub damage: [u8; CHUNK_BLOCK_COUNT as usize],
 }
 
 impl BlockArray {
@@ -29,7 +29,7 @@ impl BlockArray {
     }
 
     pub fn set_block_type(&mut self, chunk_relative_pos: ChunkRelativePos, block_type: BlockType) {
-        self.block_type[chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x] = block_type;
+        self.block_type[(chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x) as usize] = block_type;
     }
 
     pub fn set_block_id_byindex(&mut self, index: usize, id: u16) {
@@ -37,7 +37,7 @@ impl BlockArray {
     }
 
     pub fn set_block_id(&mut self, chunk_relative_pos: ChunkRelativePos, id: u16) {
-        self.block_id[chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x] = id;
+        self.block_id[(chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x) as usize] = id;
     }
 
     pub fn set_block_texture_index_byindex(&mut self, index: usize, texture_index: u8) {
@@ -45,7 +45,7 @@ impl BlockArray {
     }
 
     pub fn set_block_texture_index(&mut self, chunk_relative_pos: ChunkRelativePos, texture_index: u8) {
-        self.texture_index[chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x] = texture_index;
+        self.texture_index[(chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x) as usize] = texture_index;
     }
 
     pub fn set_block_damage_byindex(&mut self, index: usize, damage: u8) {
@@ -53,7 +53,7 @@ impl BlockArray {
     }
 
     pub fn set_block_damage(&mut self, chunk_relative_pos: ChunkRelativePos, damage: u8) {
-        self.damage[chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x] = damage;
+        self.damage[(chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x) as usize] = damage;
     }
 
     pub fn clear_block_byindex(&mut self, index: usize) {
@@ -65,36 +65,36 @@ impl BlockArray {
 
     pub fn clear_block(&mut self, chunk_relative_pos: ChunkRelativePos) {
         let pos = chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x;
-        self.block_type[pos] = BlockType::Air;
-        self.block_id[pos] = 0;
-        self.texture_index[pos] = 0;
-        self.damage[pos] = 0;
+        self.block_type[pos as usize] = BlockType::Air;
+        self.block_id[pos as usize] = 0;
+        self.texture_index[pos as usize] = 0;
+        self.damage[pos as usize] = 0;
     }
 
     pub fn filled_basic_tile() -> BlockArray {
         return BlockArray { 
-            block_type: [BlockType::Tile; CHUNK_BLOCK_COUNT],
-            block_id: ([1; CHUNK_BLOCK_COUNT]),
-            texture_index: ([0; CHUNK_BLOCK_COUNT]),
-            damage: ([0; CHUNK_BLOCK_COUNT])
+            block_type: [BlockType::Tile; CHUNK_BLOCK_COUNT as usize],
+            block_id: ([1; CHUNK_BLOCK_COUNT as usize]),
+            texture_index: ([0; CHUNK_BLOCK_COUNT as usize]),
+            damage: ([0; CHUNK_BLOCK_COUNT as usize])
         }
     }
 
     pub fn filled_basic_wall() -> BlockArray {
         return BlockArray { 
-            block_type: [BlockType::Wall; CHUNK_BLOCK_COUNT],
-            block_id: ([1; CHUNK_BLOCK_COUNT]),
-            texture_index: ([0; CHUNK_BLOCK_COUNT]),
-            damage: ([0; CHUNK_BLOCK_COUNT])
+            block_type: [BlockType::Wall; CHUNK_BLOCK_COUNT as usize],
+            block_id: ([1; CHUNK_BLOCK_COUNT as usize]),
+            texture_index: ([0; CHUNK_BLOCK_COUNT as usize]),
+            damage: ([0; CHUNK_BLOCK_COUNT as usize])
         }
     }
 
     pub fn filled_basic_air() -> BlockArray {
         return BlockArray { 
-            block_type: [BlockType::Air; CHUNK_BLOCK_COUNT],
-            block_id: ([0; CHUNK_BLOCK_COUNT]),
-            texture_index: ([0; CHUNK_BLOCK_COUNT]),
-            damage: ([0; CHUNK_BLOCK_COUNT])
+            block_type: [BlockType::Air; CHUNK_BLOCK_COUNT as usize],
+            block_id: ([0; CHUNK_BLOCK_COUNT as usize]),
+            texture_index: ([0; CHUNK_BLOCK_COUNT as usize]),
+            damage: ([0; CHUNK_BLOCK_COUNT as usize])
         }
     }
 }
