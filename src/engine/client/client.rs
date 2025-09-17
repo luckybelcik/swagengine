@@ -130,7 +130,7 @@ impl Client {
             println!("v Bytes read: {} bytes", bytes_consumed);
             match packet {
                 ServerPacket::ChunkMesh(mesh) => {
-                    println!("Got mesh!")
+                    println!("Got mesh at position {}x {}y!", mesh.x, mesh.y)
                 },
                 ServerPacket::Message(message) => {
                     println!("Got message {}!", message)

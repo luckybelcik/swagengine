@@ -3,7 +3,7 @@ use dashmap::DashMap;
 use glam::{IVec2, UVec2};
 use hecs::World;
 
-use crate::engine::{components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::chunk::Chunk};
+use crate::engine::{components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::chunk::{self, Chunk}};
 
 pub struct Dimension {
     pub name: String,
@@ -44,8 +44,8 @@ impl Dimension {
         
     }
 
-    pub fn get_chunks(&self) -> std::collections::hash_map::Values<'_, IVec2, Chunk> {
-        return self.chunks.values();
+    pub fn get_chunks(&self) -> Vec<(&IVec2, &Chunk)> {
+        self.chunks.iter().collect::<Vec<(&IVec2, &Chunk)>>()
     }
 
     fn chunk_at(&self, pos: &IVec2) -> bool {

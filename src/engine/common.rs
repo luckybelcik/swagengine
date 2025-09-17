@@ -19,6 +19,8 @@ impl ChunkRelativePos {
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug)]
 pub struct ChunkMesh {
+    pub x: i32,
+    pub y: i32,
     pub foreground: BlockArray,
     pub middleground: BlockArray,
     pub background: BlockArray,
