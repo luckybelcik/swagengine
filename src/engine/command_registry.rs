@@ -37,11 +37,14 @@ pub fn build_registry<'a>(environment: CommandEnvironment) -> HashMap<&'static s
     let mut mapped = HashMap::new();
     let mut commands = Vec::new();
 
-    match environment {
-        CommandEnvironment::Client => {commands.extend(create_client_commands())},
-        CommandEnvironment::Server => {commands.extend(create_server_commands())},
-        CommandEnvironment::Main => {commands.extend(create_main_commands())},
-    }
+    #[cfg(feature = "server")]
+    commands.extend(create_server_commands());
+
+    #[cfg(feature = "client")]
+    commands.extend(create_client_commands());
+
+    // Commands for both environments
+    commands.extend(create_main_commands());
 
     for cmd in commands {
         if cmd.command_environment != environment {
