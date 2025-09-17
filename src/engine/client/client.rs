@@ -1,7 +1,6 @@
-use crate::engine::{command_registry::{self, DebugCommandWithArgs}, state::State, time::Time};
+use crate::engine::{client::state::State, command_registry::{self, DebugCommandWithArgs}, time::Time};
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{sync::{mpsc::Receiver, Arc}};
-use crate::engine::util::{ClientConfig};
 
 pub struct Client {
     state: Option<State>,
@@ -148,5 +147,19 @@ impl Client {
 
     pub fn get_nickname(&self) -> &String {
         return &self.player_nickname;
+    }
+}
+
+pub struct ClientConfig {
+    pub frame_cap: u32,
+    pub vsync: bool
+}
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        Self { 
+            frame_cap: 60, 
+            vsync: true 
+        }
     }
 }
