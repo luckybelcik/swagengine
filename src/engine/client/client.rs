@@ -9,6 +9,7 @@ pub struct Client {
     console_listener: Receiver<DebugCommandWithArgs>,
     server_listener: Receiver<String>,
     pub client_config: ClientConfig,
+    player_uuid: u64,
 }
 
 impl Client {
@@ -19,6 +20,7 @@ impl Client {
             console_listener: console_listener,
             server_listener: server_listener,
             client_config: ClientConfig::default(),
+            player_uuid: fastrand::u64(..),
         }
     }
 }
@@ -122,5 +124,27 @@ impl Client {
         while let Ok(cmd) = self.console_listener.try_recv() {
             command_registry::handle_client_command(self, &cmd);
         }
+    }
+    
+    pub fn get_uuid(&self) -> u64 {
+        return self.player_uuid;
+    }
+
+    pub fn get_uuid_string(&self) -> String {
+        let hex_string = format!("{:016x}", self.player_uuid);
+
+        let dashed_hex: String = hex_string
+            .chars()
+            .enumerate()
+            .flat_map(|(i, c)| {
+                if i > 0 && i % 4 == 0 {
+                    vec!['-', c]
+                } else {
+                    vec![c]
+                }
+            })
+            .collect();
+
+        return dashed_hex;
     }
 }
