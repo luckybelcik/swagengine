@@ -21,3 +21,6 @@ rayon = "1.11.0"
 noise-functions = "0.8.1"
 fastrand = "2.3.0"
 glam = "0.30.5"
+serde = { version = "1.0.225", features = ["derive"] }
+serde_arrays = "0.2.0"
+bincode = "2.0.0"

@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::engine::{common::ChunkRelativePos, server::constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum BlockType {
     Air,
     Tile,
@@ -15,11 +17,15 @@ pub enum BlockType {
 /   idk what in the tile entity type lol i gotta find some use
 */ 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct BlockArray {
+    #[serde(with = "serde_arrays")]
     pub block_type: [BlockType; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
     pub block_id: [u16; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
     pub texture_index: [u8; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
     pub damage: [u8; CHUNK_BLOCK_COUNT as usize],
 }
 

@@ -1,3 +1,7 @@
+use serde::{Deserialize, Serialize};
+
+use crate::engine::server::common::BlockArray;
+
 pub struct ChunkRelativePos {
     pub x: u8,
     pub y: u8,
@@ -10,4 +14,17 @@ impl ChunkRelativePos {
             y,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ChunkMesh {
+    foreground: BlockArray,
+    middleground: BlockArray,
+    background: BlockArray,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ServerPacket {
+    Ping,
+    ChunkMesh(ChunkMesh)
 }
