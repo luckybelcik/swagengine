@@ -1,31 +1,59 @@
 use std::collections::HashMap;
-use crate::{common::Environment, engine::{client::{self, commands::create_client_commands}, commands::create_general_commands, server::commands::create_server_commands}, get_environment, App};
+use crate::engine::{client::{client::Client, commands::create_client_commands}, commands::create_main_commands, server::{commands::create_server_commands, server::Server}};
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Clone, Copy)]
+pub enum CommandEnvironment {
+    Client,
+    Server,
+    Main,
+}
+
+pub enum CommandDependency<'a>{
+    Client(&'a mut Client),
+    Server(&'a mut Server),
+    Main,
+}
+
+#[derive(Eq, PartialEq, Hash, Clone, Copy)]
 pub struct DebugCommand {
     pub name: &'static str,
     pub aliases: &'static [&'static str],
     pub description: &'static str,
-    pub execute: fn(&mut App, &[&str]),
+    pub execute: fn(&mut CommandDependency, &Vec<String>),
+    pub command_environment: CommandEnvironment,
 }
 
-pub fn build_registry() -> HashMap<&'static str, DebugCommand> {
-    let mut mapped = HashMap::new();
-    let mut commands = create_general_commands();
+#[derive(Eq, PartialEq, Hash, Clone)]
+pub struct DebugCommandWithArgs {
+    pub debug_command: DebugCommand,
+    pub command_args: Vec<String>,
+}
 
-    match get_environment() {
-        Environment::Client => {commands.extend(create_client_commands())},
-        Environment::Server => {commands.extend(create_server_commands())},
-        Environment::Both => {commands.extend(create_client_commands()); commands.extend(create_server_commands())},
+pub struct CommandRegistry {
+    pub global_registry: HashMap<&'static str, DebugCommand>,
+}
+
+pub fn build_registry<'a>(environment: CommandEnvironment) -> HashMap<&'static str, DebugCommand> {
+    let mut mapped = HashMap::new();
+    let mut commands = Vec::new();
+
+    match environment {
+        CommandEnvironment::Client => {commands.extend(create_client_commands())},
+        CommandEnvironment::Server => {commands.extend(create_server_commands())},
+        CommandEnvironment::Main => {commands.extend(create_main_commands())},
     }
 
     for cmd in commands {
+        if cmd.command_environment != environment {
+            continue;
+        }
         for alias in cmd.aliases {
             mapped.insert(*alias, DebugCommand {
                 name: cmd.name,
                 aliases: cmd.aliases,
                 description: cmd.description,
                 execute: cmd.execute,
+                command_environment: cmd.command_environment,
             });
         }
         mapped.insert(cmd.name, cmd);
@@ -34,20 +62,19 @@ pub fn build_registry() -> HashMap<&'static str, DebugCommand> {
     return mapped;
 }
 
-pub fn handle_command(app: &mut App, input: &str) {
-    let parts: Vec<&str> = input.trim().split_whitespace().collect();
-    if parts.is_empty() {
-        return;
-    }
+pub fn handle_client_command(client: &mut Client, command: &DebugCommandWithArgs) {
+    let cmd: DebugCommand = command.debug_command;
+    (cmd.execute)(&mut CommandDependency::Client(client), &command.command_args);
+}
 
-    let cmd_name = parts[0];
-    let args = &parts[1..];
+pub fn handle_server_command(server: &mut Server, command: &DebugCommandWithArgs) {
+    let cmd: DebugCommand = command.debug_command;
+    (cmd.execute)(&mut CommandDependency::Server(server), &command.command_args);
+}
 
-    if let Some(command) = app.command_registry.get(cmd_name) {
-        (command.execute)(app, args);
-    } else {
-        println!("Unknown command. Type 'help' for a list.");
-    }
+pub fn handle_main_command(command: &DebugCommandWithArgs) {
+    let cmd: DebugCommand = command.debug_command;
+    (cmd.execute)(&mut CommandDependency::Main, &command.command_args);
 }
 
 pub fn error_wrong_type() {
@@ -64,8 +91,4 @@ pub fn error_command_not_found() {
 
 pub fn error_dimension_not_found() {
     println!("Failed to execute command - the dimension you were looking for could not be found.")
-}
-
-pub fn error_server_not_started() {
-    println!("Failed to execute command - the server has not been started.")
 }

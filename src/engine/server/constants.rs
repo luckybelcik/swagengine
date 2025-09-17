@@ -3,3 +3,5 @@
 // it is only put on the heap once it enters the hashmap
 pub const CHUNK_SIZE: usize = 64;
 pub const CHUNK_BLOCK_COUNT: usize = CHUNK_SIZE * CHUNK_SIZE;
+
+pub const TICK_RATE: u64 = 60;
