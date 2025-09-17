@@ -132,6 +132,9 @@ impl Client {
                 ServerPacket::ChunkMesh(mesh) => {
                     println!("Got mesh at position {}x {}y!", mesh.x, mesh.y)
                 },
+                ServerPacket::BlockChange(block_change) => {
+                    println!("Got block change at {}x {}y in layer {:?} with blocktype {:?} and block_id {}", block_change.x, block_change.y, block_change.layer, block_change.block_type, block_change.block_id)
+                },
                 ServerPacket::Message(message) => {
                     println!("Got message {}!", message)
                 },

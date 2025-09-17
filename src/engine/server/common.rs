@@ -107,7 +107,7 @@ impl BlockArray {
 }
 
 // The fore and middle ground never have walls, while the background has only walls
-#[derive(Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq)]
 pub enum LayerType {
     Foreground,
     Middleground,
