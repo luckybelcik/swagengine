@@ -10,6 +10,7 @@ pub struct Client {
     server_listener: Receiver<String>,
     pub client_config: ClientConfig,
     player_uuid: u64,
+    player_nickname: String,
 }
 
 impl Client {
@@ -21,6 +22,7 @@ impl Client {
             server_listener: server_listener,
             client_config: ClientConfig::default(),
             player_uuid: fastrand::u64(..),
+            player_nickname: "playerboy".to_string(),
         }
     }
 }
@@ -146,5 +148,9 @@ impl Client {
             .collect();
 
         return dashed_hex;
+    }
+
+    pub fn get_nickname(&self) -> &String {
+        return &self.player_nickname;
     }
 }

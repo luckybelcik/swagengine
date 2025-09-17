@@ -43,7 +43,7 @@ fn initialize_client(rx_console_to_client: Receiver<DebugCommandWithArgs>, rx_se
 
     let mut client: Client = Client::new(rx_console_to_client, rx_server_to_client);
 
-    println!("Started client with player UUID {}", client.get_uuid_string());
+    println!("Started client with player UUID [{}] and nickname \"{}\"", client.get_uuid_string(), client.get_nickname());
 
     event_loop.run_app(&mut client).unwrap();
 }
