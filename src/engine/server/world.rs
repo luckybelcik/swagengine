@@ -1,12 +1,13 @@
 use std::{collections::HashMap, time::{Duration, Instant}};
 use dashmap::DashMap;
+use glam::{IVec2, UVec2};
 use hecs::World;
 
-use crate::engine::{common::{IVec2}, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::chunk::Chunk};
+use crate::engine::{components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::chunk::Chunk};
 
 pub struct Dimension {
     pub name: String,
-    pub size: IVec2,
+    pub size: UVec2,
     ecs_world: hecs::World,
     chunks: HashMap<IVec2, Chunk>,
     pub players: HashMap<PlayerID, hecs::Entity>,
@@ -19,7 +20,7 @@ impl Dimension {
     pub fn new_basic_dimension() -> Dimension {
         return Dimension { 
             name: ("basic_dimension".to_string()),
-            size: (IVec2 { x: (100), y: (100) }),
+            size: (UVec2 { x: (100), y: (100) }),
             ecs_world: (World::new()),
             chunks: (HashMap::new()),
             players: (HashMap::new()),
@@ -48,8 +49,8 @@ impl Dimension {
     }
 
     fn chunk_within_world_bounds(&self, pos: &IVec2) -> bool {
-        let half_x = self.size.x / 2;
-        let half_y = self.size.y / 2;
+        let half_x = self.size.x as i32 / 2;
+        let half_y = self.size.y as i32 / 2;
 
         let is_x_within_bounds = pos.x >= -half_x && pos.x < half_x;
         let is_y_within_bounds = pos.y >= -half_y && pos.y < half_y;
