@@ -19,14 +19,14 @@ impl ChunkRelativePos {
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug)]
 pub struct ChunkMesh {
-    foreground: BlockArray,
-    middleground: BlockArray,
-    background: BlockArray,
+    pub foreground: BlockArray,
+    pub middleground: BlockArray,
+    pub background: BlockArray,
 }
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug)]
 pub enum ServerPacket {
     Ping,
     Message(String),
-    ChunkMesh(ChunkMesh),
+    ChunkMesh(Box<ChunkMesh>),
 }

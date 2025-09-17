@@ -5,10 +5,14 @@ use noise_functions::{Noise, OpenSimplex2};
 
 use crate::engine::{common::{ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
 
+pub struct HeapChunk {
+    pub chunk: Box<Chunk>,
+}
+
 pub struct Chunk {
-    foreground: BlockArray,
-    middleground: BlockArray,
-    background: BlockArray,
+    pub foreground: BlockArray,
+    pub middleground: BlockArray,
+    pub background: BlockArray,
 
     players: HashSet<PlayerID>,
     entites: HashSet<EntityID>,

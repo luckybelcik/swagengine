@@ -44,6 +44,10 @@ impl Dimension {
         
     }
 
+    pub fn get_chunks(&self) -> std::collections::hash_map::Values<'_, IVec2, Chunk> {
+        return self.chunks.values();
+    }
+
     fn chunk_at(&self, pos: &IVec2) -> bool {
         return self.chunks.contains_key(&pos);
     }
