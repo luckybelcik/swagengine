@@ -88,6 +88,11 @@ impl ApplicationHandler for Client {
             }
         } else if let Some(size) = resized_size {
             if let Some(state) = &mut self.state {
+                // Break early if either sizes are 0 (prevents a crash)
+                if size.height == 0 || size.width == 0 {
+                    return;
+                }
+
                 state.resize(size);
             }
         }
