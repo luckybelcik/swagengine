@@ -67,10 +67,6 @@ impl Chunk {
         self.get_block_array_mut(layer).set_block_texture_index(chunk_relative_pos, new_texture_index);
     }
 
-    pub fn change_block_property_damage(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, damage: u8) {
-        self.get_block_array_mut(layer).set_block_damage(chunk_relative_pos, damage);
-    }
-
     fn get_block_array_mut(&mut self, layer: LayerType) -> &mut BlockArray {
         match layer {
             LayerType::Foreground => {
