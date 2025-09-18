@@ -130,6 +130,10 @@ impl State {
         &self.window
     }
 
+    pub fn get_device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
