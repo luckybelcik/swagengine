@@ -54,13 +54,15 @@ impl State {
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,
+            view_formats: vec![surface_format.add_srgb_suffix()],
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
             width: size.width,
             height: size.height,
-            present_mode: surface_capabilities.present_modes[0],
-            alpha_mode: surface_capabilities.alpha_modes[0],
-            view_formats: vec![],
             desired_maximum_frame_latency: 2,
+            present_mode: wgpu::PresentMode::Immediate,
         };
+
+        surface.configure(&device, &config);
 
         let state = State {
             window,
@@ -72,9 +74,6 @@ impl State {
             surface_format,
         };
 
-        // Configure surface for the first time
-        state.configure_surface();
-
         state
     }
 
@@ -82,24 +81,13 @@ impl State {
         &self.window
     }
 
-    pub fn configure_surface(&self) {
-        let surface_config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: self.surface_format,
-            view_formats: vec![self.surface_format.add_srgb_suffix()],
-            alpha_mode: wgpu::CompositeAlphaMode::Auto,
-            width: self.size.width,
-            height: self.size.height,
-            desired_maximum_frame_latency: 2,
-            present_mode: wgpu::PresentMode::Immediate,
-        };
-        self.surface.configure(&self.device, &surface_config);
-    }
-
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         self.size = new_size;
 
-        self.configure_surface();
+        self.config.width = new_size.width;
+        self.config.height = new_size.height;
+
+        self.surface.configure(&self.device, &self.config);
     }
 
     pub fn render(&mut self) {
