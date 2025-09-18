@@ -34,9 +34,6 @@ impl Client {
         self.on_handle_server_packet();
         self.on_update_frame();
         self.on_render();
-        if let Some(state) = &mut self.state {
-            state.get_window().request_redraw();
-        }
     }
 
     fn resize(&mut self, size: &PhysicalSize<u32> ) {
