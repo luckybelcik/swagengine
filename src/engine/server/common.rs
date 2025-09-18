@@ -5,11 +5,11 @@ use crate::engine::{common::ChunkRelativePos, server::constants::{CHUNK_BLOCK_CO
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, Encode, Decode)]
 pub enum BlockType {
-    Air,
-    Tile,
-    Wall,
-    Sprite,
-    TileEntity,
+    Air = 0,
+    Tile = 1,
+    Wall = 2,
+    Sprite = 3,
+    TileEntity = 4,
 }
 
 /*  
