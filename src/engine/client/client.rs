@@ -41,11 +41,6 @@ impl Client {
 
     fn resize(&mut self, size: &PhysicalSize<u32> ) {
         if let Some(state) = &mut self.state {
-            // Break early if either sizes are 0 (prevents a crash)
-            if size.height == 0 || size.width == 0 {
-                return;
-            }
-
             state.resize(*size);
         }
     }
