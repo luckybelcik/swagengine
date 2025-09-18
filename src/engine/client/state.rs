@@ -8,6 +8,7 @@ pub struct State {
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
+    config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
     surface_format: wgpu::TextureFormat,
     window: Arc<Window>,
@@ -50,10 +51,22 @@ impl State {
             .copied()
             .unwrap_or(surface_capabilities.formats[0]);
 
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            width: size.width,
+            height: size.height,
+            present_mode: surface_capabilities.present_modes[0],
+            alpha_mode: surface_capabilities.alpha_modes[0],
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        };
+
         let state = State {
             window,
             device,
             queue,
+            config,
             size,
             surface,
             surface_format,
