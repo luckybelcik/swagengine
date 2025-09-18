@@ -1,4 +1,4 @@
-use crate::engine::{client::state::State, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, ServerPacket}, time::Time};
+use crate::engine::{client::{common::ClientChunk, state::State}, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, ServerPacket}, time::Time};
 use glam::IVec2;
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
@@ -11,7 +11,7 @@ pub struct Client {
     pub client_config: ClientConfig,
     player_uuid: u64,
     player_nickname: String,
-    loaded_chunks: HashMap<IVec2, ChunkMesh>,
+    loaded_chunks: HashMap<IVec2, ClientChunk>,
 }
 
 impl Client {
@@ -124,13 +124,14 @@ impl Client {
             let (packet, bytes_consumed) = bincode::decode_from_slice(&raw_packet, bincode::config::standard()).unwrap();
             println!("v Bytes read: {} bytes", bytes_consumed);
             match packet {
-                ServerPacket::ChunkMesh(mesh) => {
-                    let coord = IVec2::new(mesh.0.0, mesh.0.1);
+                ServerPacket::ChunkMesh(packet) => {
+                    let coord = IVec2::new(packet.0.0, packet.0.1);
+                    let mesh = packet.1;
                     if self.loaded_chunks.contains_key(&coord) {
-                        println!("Got mesh already at {}x {}y!", mesh.0.0, mesh.0.1);
+                        println!("Got mesh already at {}x {}y!", coord.x, coord.y);
                     } else {
-                        println!("Got mesh at position {}x {}y!", mesh.0.0, mesh.0.1);
-                        self.loaded_chunks.insert(coord, *mesh.1);
+                        println!("Got mesh at position {}x {}y!", coord.x, coord.y);
+                        self.loaded_chunks.insert(coord, ClientChunk::create(coord, *mesh, self.state.as_ref().expect("666 demon evil client error").get_device()));
                     }
                 },
                 ServerPacket::BlockChange(block_change) => {
