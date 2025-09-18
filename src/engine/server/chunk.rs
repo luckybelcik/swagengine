@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use glam::IVec2;
 use noise_functions::{Noise, OpenSimplex2};
 
-use crate::engine::{common::{ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
 
 pub struct HeapChunk {
     pub chunk: Box<Chunk>,
@@ -94,4 +94,22 @@ impl Chunk {
             },
         }
     }
+
+    pub fn to_mesh(&self) -> ChunkMesh {
+        return ChunkMesh {
+            foreground: convert_layer_to_aos(self.foreground),
+            middleground: convert_layer_to_aos(self.middleground),
+            background: convert_layer_to_aos(self.background)
+        }
+    }
+}
+
+fn convert_layer_to_aos(layer: BlockArray) -> [Block; CHUNK_BLOCK_COUNT as usize] {
+    core::array::from_fn(|i| {
+        Block {
+            block_type: layer.block_type[i],
+            block_id: layer.block_id[i],
+            texture_index: layer.texture_index[i],
+        }
+    })
 }

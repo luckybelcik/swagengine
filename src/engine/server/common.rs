@@ -18,13 +18,10 @@ pub enum BlockType {
 /   idk what in the tile entity type lol i gotta find some use
 */ 
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Clone, Copy)]
 pub struct BlockArray {
-    #[serde(with = "serde_arrays")]
     pub block_type: [BlockType; CHUNK_BLOCK_COUNT as usize],
-    #[serde(with = "serde_arrays")]
     pub block_id: [u16; CHUNK_BLOCK_COUNT as usize],
-    #[serde(with = "serde_arrays")]
     pub texture_index: [u8; CHUNK_BLOCK_COUNT as usize],
 }
 

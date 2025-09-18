@@ -78,11 +78,7 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
 
             for dimension in server.dimensions.values() {
                 for (position, chunk) in dimension.get_chunks() {
-                    server.send_packet(ServerPacket::ChunkMesh(((position.x, position.y), Box::new(ChunkMesh {
-                        foreground: chunk.foreground,
-                        middleground: chunk.middleground,
-                        background: chunk.background,
-                    }))));
+                    server.send_packet(ServerPacket::ChunkMesh(((position.x, position.y), Box::new(chunk.to_mesh()))));
                 }
             }
 
