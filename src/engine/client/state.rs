@@ -44,8 +44,11 @@ impl State {
 
         let size = window.inner_size();
 
-        let cap = surface.get_capabilities(&adapter);
-        let surface_format = cap.formats[0];
+        let surface_capabilities = surface.get_capabilities(&adapter);
+        let surface_format = surface_capabilities.formats.iter()
+            .find(|f| f.is_srgb())
+            .copied()
+            .unwrap_or(surface_capabilities.formats[0]);
 
         let state = State {
             window,
