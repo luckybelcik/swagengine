@@ -1,5 +1,4 @@
 use bincode::{Encode, Decode};
-use glam::I64Vec2;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::server::common::{BlockArray, BlockType, LayerType};

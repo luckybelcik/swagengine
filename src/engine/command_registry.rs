@@ -14,7 +14,7 @@ pub enum CommandDependency<'a>{
     Main,
 }
 
-#[derive(Eq, PartialEq, Hash, Clone, Copy)]
+#[derive(Hash, Clone, Copy)]
 pub struct DebugCommand {
     pub name: &'static str,
     pub aliases: &'static [&'static str],
@@ -23,7 +23,7 @@ pub struct DebugCommand {
     pub command_environment: CommandEnvironment,
 }
 
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Hash, Clone)]
 pub struct DebugCommandWithArgs {
     pub debug_command: DebugCommand,
     pub command_args: Vec<String>,

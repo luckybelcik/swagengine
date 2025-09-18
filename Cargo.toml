@@ -11,16 +11,16 @@ default = ["client", "server"]
 [dependencies]
 env_logger = "0.11"
 pollster = "0.4"
-wgpu = "25.0.0"
+wgpu = "26.0.1"
 winit = { version = "0.30.8", features = ["android-native-activity"] }
-sysinfo = "0.35.2"
+sysinfo = "0.37.0"
 bitflags = "2.9.2"
 hecs = "0.10.5"
 dashmap = "6.1.0"
 rayon = "1.11.0"
 noise-functions = "0.8.1"
 fastrand = "2.3.0"
-glam = "0.30.5"
+glam = "0.30.6"
 serde = { version = "1.0.225", features = ["derive"] }
 serde_arrays = "0.2.0"
 bincode = { version = "2.0.0", features = ["serde"] }
