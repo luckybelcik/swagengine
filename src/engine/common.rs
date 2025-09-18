@@ -1,4 +1,5 @@
 use bincode::{Encode, Decode};
+use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::server::{common::{BlockArray, BlockType, LayerType}, constants::CHUNK_BLOCK_COUNT};
@@ -17,7 +18,8 @@ impl ChunkRelativePos {
     }
 }
 
-#[derive(Serialize, Deserialize, Encode, Decode, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy, Serialize, Deserialize, Encode, Decode, Debug, Zeroable, Pod)]
 pub struct ChunkMesh {
     #[serde(with = "serde_arrays")]
     pub foreground: [Block; CHUNK_BLOCK_COUNT as usize],
@@ -27,10 +29,13 @@ pub struct ChunkMesh {
     pub background: [Block; CHUNK_BLOCK_COUNT as usize],
 }
 
-#[derive(Serialize, Deserialize, Encode, Decode, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy, Serialize, Deserialize, Encode, Decode, Debug, Zeroable, Pod)]
 pub struct Block {
-    pub block_type: BlockType,
+    pub x: u8,
+    pub y: u8,
     pub block_id: u16,
+    pub block_type: u8,
     pub texture_index: u8,
 }
 

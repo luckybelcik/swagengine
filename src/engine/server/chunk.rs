@@ -107,8 +107,10 @@ impl Chunk {
 fn convert_layer_to_aos(layer: BlockArray) -> [Block; CHUNK_BLOCK_COUNT as usize] {
     core::array::from_fn(|i| {
         Block {
-            block_type: layer.block_type[i],
+            x: (i % CHUNK_SIZE as usize) as u8,
+            y: (i / CHUNK_SIZE as usize) as u8,
             block_id: layer.block_id[i],
+            block_type: layer.block_type[i] as u8,
             texture_index: layer.texture_index[i],
         }
     })
