@@ -138,17 +138,17 @@ impl Client {
 
                 packet
             };
-            
+
             println!("v Bytes read: {} bytes", bytes_consumed);
             match packet {
-                ServerPacket::ChunkMesh(packet) => {
+                ServerPacket::Chunk(packet) => {
                     let coord = IVec2::new(packet.0.0, packet.0.1);
-                    let mesh = packet.1;
+                    let mesh = ChunkMesh::from(&*packet.1);
                     if self.loaded_chunks.contains_key(&coord) {
                         println!("Got mesh already at {}x {}y!", coord.x, coord.y);
                     } else {
                         println!("Got mesh at position {}x {}y!", coord.x, coord.y);
-                        self.loaded_chunks.insert(coord, ClientChunk::create(coord, *mesh, self.state.as_ref().expect("666 demon evil client error").get_device()));
+                        self.loaded_chunks.insert(coord, ClientChunk::create(coord, mesh, self.state.as_ref().expect("666 demon evil client error").get_device()));
                     }
                 },
                 ServerPacket::BlockChange(block_change) => {

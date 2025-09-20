@@ -1,8 +1,10 @@
+use std::array::from_fn;
+
 use bincode::{Encode, Decode};
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
-use crate::engine::server::{common::{BlockArray, BlockType, LayerType}, constants::CHUNK_BLOCK_COUNT};
+use crate::engine::server::{chunk::Chunk, common::{BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}};
 
 pub struct ChunkRelativePos {
     pub x: u8,
@@ -29,6 +31,86 @@ pub struct ChunkMesh {
     pub background: [Block; CHUNK_BLOCK_COUNT as usize],
 }
 
+impl From<&PacketChunk> for ChunkMesh {
+    fn from(packet: &PacketChunk) -> Self {
+        ChunkMesh {
+            foreground: convert_layer_to_aos_mesh(
+                packet.foreground_blockid,
+                packet.foreground_blocktype,
+                packet.foreground_textureindex,
+            ),
+            middleground: convert_layer_to_aos_mesh(
+                packet.middleground_blockid,
+                packet.middleground_blocktype,
+                packet.middleground_textureindex,
+            ),
+            background: convert_layer_to_aos_mesh(
+                packet.background_blockid,
+                packet.background_blocktype,
+                packet.background_textureindex,
+            ),
+        }
+    }
+}
+
+fn convert_layer_to_aos_mesh(
+    block_ids: [u16; CHUNK_BLOCK_COUNT as usize],
+    block_types: [u8; CHUNK_BLOCK_COUNT as usize],
+    texture_indices: [u8; CHUNK_BLOCK_COUNT as usize],
+) -> [Block; CHUNK_BLOCK_COUNT as usize] {
+    core::array::from_fn(|i| {
+        Block {
+            x: i as u8 % CHUNK_SIZE,
+            y: i as u8 / CHUNK_SIZE,
+            
+            block_id: block_ids[i],
+            block_type: block_types[i],
+            texture_index: texture_indices[i],
+        }
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Serialize, Deserialize, Encode, Decode, Debug, Zeroable, Pod)]
+pub struct PacketChunk {
+    #[serde(with = "serde_arrays")]
+    pub foreground_blockid: [u16; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
+    pub foreground_blocktype: [u8; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
+    pub foreground_textureindex: [u8; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
+    pub middleground_blockid: [u16; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
+    pub middleground_blocktype: [u8; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
+    pub middleground_textureindex: [u8; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
+    pub background_blockid: [u16; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
+    pub background_blocktype: [u8; CHUNK_BLOCK_COUNT as usize],
+    #[serde(with = "serde_arrays")]
+    pub background_textureindex: [u8; CHUNK_BLOCK_COUNT as usize],
+}
+
+impl From<&Chunk> for PacketChunk {
+    fn from(chunk: &Chunk) -> Self {
+        PacketChunk {
+            foreground_blockid: from_fn(|i| chunk.foreground.block_id[i]),
+            foreground_blocktype: from_fn(|i| chunk.foreground.block_type[i] as u8),
+            foreground_textureindex: from_fn(|i| chunk.foreground.texture_index[i]),
+
+            middleground_blockid: from_fn(|i| chunk.middleground.block_id[i]),
+            middleground_blocktype: from_fn(|i| chunk.middleground.block_type[i] as u8),
+            middleground_textureindex: from_fn(|i| chunk.middleground.texture_index[i]),
+
+            background_blockid: from_fn(|i| chunk.background.block_id[i]),
+            background_blocktype: from_fn(|i| chunk.background.block_type[i] as u8),
+            background_textureindex: from_fn(|i| chunk.background.texture_index[i]),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Serialize, Deserialize, Encode, Decode, Debug, Zeroable, Pod)]
 pub struct Block {
@@ -51,7 +133,7 @@ pub enum ServerPacket {
     Ping,
     Message(String),
     BlockChange(((i64, i64), BlockChange)),
-    ChunkMesh(((i32, i32), Box<ChunkMesh>)),
+    Chunk(((i32, i32), Box<PacketChunk>)),
 }
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug)]

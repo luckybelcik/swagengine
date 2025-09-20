@@ -4,7 +4,7 @@ use std::{collections::HashMap, sync::{mpsc::{Receiver, Sender}, LazyLock}, thre
 
 use winit::{event_loop::{EventLoop, ControlFlow}};
 
-use crate::engine::{client::client::Client, command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, common::{BlockChange, ChunkMesh, ServerPacket}, server::{common::{BlockType, LayerType}, constants::TICK_RATE, server::Server}};
+use crate::engine::{client::client::Client, command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, common::{BlockChange, ChunkMesh, PacketChunk, ServerPacket}, server::{common::{BlockType, LayerType}, constants::TICK_RATE, server::Server}};
 
 
 fn main() {
@@ -78,7 +78,7 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
 
             for dimension in server.dimensions.values() {
                 for (position, chunk) in dimension.get_chunks() {
-                    server.send_packet(ServerPacket::ChunkMesh(((position.x, position.y), Box::new(chunk.to_mesh()))));
+                    server.send_packet(ServerPacket::Chunk(((position.x, position.y), Box::new(PacketChunk::from(chunk)))));
                 }
             }
 
