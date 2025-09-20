@@ -16,6 +16,20 @@ pub fn create_server_commands() -> Vec<DebugCommand> {
     });
 
     commands.push(DebugCommand {
+        name: "switchcompressionstate",
+        aliases: &["scs"],
+        description: "Switches whether the server compresses or does not compress sent data.",
+        execute: |dependency, _args| {
+            if let CommandDependency::Server(server) = dependency {
+                server.compress_sent_data = !server.compress_sent_data;
+
+                println!("Compress sent data: {}", server.compress_sent_data)
+            }
+        },
+        command_environment: CommandEnvironment::Server,
+    });
+
+    commands.push(DebugCommand {
         name: "dimensions",
         aliases: &["dims"],
         description: "Returns all dimension names.",
