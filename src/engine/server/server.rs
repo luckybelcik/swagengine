@@ -1,5 +1,5 @@
 use std::{collections::{hash_map::Keys, HashMap}, sync::mpsc::{Receiver, Sender}};
-use crate::engine::{command_registry::{self, DebugCommandWithArgs}, common::ServerPacket, server::world::Dimension};
+use crate::engine::{command_registry::{self, DebugCommandWithArgs}, common::{PacketHeader, ServerPacket}, server::world::Dimension};
 
 pub struct Server {
     pub dimensions: HashMap<String, Dimension>,
@@ -40,7 +40,38 @@ impl Server {
     }
 
     pub fn send_packet(&self, packet: ServerPacket) {
-        let _ = self.client_sender.send(bincode::encode_to_vec(packet, bincode::config::standard()).unwrap());
+        // turn into bytes
+        let encoded_packet = bincode::encode_to_vec(packet, bincode::config::standard()).unwrap();
+        let mut is_compressed = false;
+        let raw_len = encoded_packet.len();
+
+        // compress if large enough
+        let encoded_packet: Vec<u8> = if raw_len > 100 {
+            let max_compressed_size = lz4_flex::block::get_maximum_output_size(raw_len);
+            let mut compressed_buffer = vec![0u8; max_compressed_size];
+
+            let compressed_len = lz4_flex::compress_into(&encoded_packet, &mut compressed_buffer)
+            .map_err(|e| format!("LZ4 Compression Error: {}", e)).unwrap();
+
+            compressed_buffer.truncate(compressed_len);
+
+            is_compressed = true;
+            compressed_buffer
+        } else {
+            encoded_packet
+        };
+
+        // Pack into header
+        let encoded_packet = PacketHeader {
+            is_compressed,
+            original_size: raw_len,
+            data: encoded_packet,
+        };
+
+        // Turn into bytes a second time
+        let encoded_packet = bincode::encode_to_vec(encoded_packet, bincode::config::standard()).unwrap();
+
+        let _ = self.client_sender.send(encoded_packet);
     }
 
     pub fn get_dimension(&self, name: &str) -> Option<&Dimension> {

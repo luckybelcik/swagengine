@@ -1,4 +1,4 @@
-use crate::engine::{client::{common::ClientChunk, state::State}, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, ServerPacket}, time::Time};
+use crate::engine::{client::{common::ClientChunk, state::State}, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, PacketHeader, ServerPacket}, time::Time};
 use glam::IVec2;
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
@@ -121,7 +121,24 @@ impl Client {
 
     fn on_handle_server_packet(&mut self) {
         while let Ok(raw_packet) = self.server_listener.try_recv() {
-            let (packet, bytes_consumed) = bincode::decode_from_slice(&raw_packet, bincode::config::standard()).unwrap();
+            // decode to packet header
+            let (packet, bytes_consumed): (PacketHeader, usize) = bincode::decode_from_slice(&raw_packet, bincode::config::standard()).unwrap();
+
+            let is_compressed = packet.is_compressed;
+            let original_size = packet.original_size;
+
+            let packet: ServerPacket = if is_compressed {
+                let decompressed_packet = lz4_flex::decompress(&packet.data, original_size).unwrap();
+
+                let (packet, _bytes) = bincode::decode_from_slice(&decompressed_packet, bincode::config::standard()).unwrap();
+
+                packet
+            } else {
+                let (packet, _bytes) = bincode::decode_from_slice(&packet.data, bincode::config::standard()).unwrap();
+
+                packet
+            };
+            
             println!("v Bytes read: {} bytes", bytes_consumed);
             match packet {
                 ServerPacket::ChunkMesh(packet) => {

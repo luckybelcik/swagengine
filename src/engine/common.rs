@@ -53,3 +53,10 @@ pub enum ServerPacket {
     BlockChange(((i64, i64), BlockChange)),
     ChunkMesh(((i32, i32), Box<ChunkMesh>)),
 }
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug)]
+pub struct PacketHeader {
+    pub is_compressed: bool,
+    pub original_size: usize,
+    pub data: Vec<u8>,
+}
