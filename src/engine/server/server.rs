@@ -6,6 +6,7 @@ pub struct Server {
     running: bool,
     console_listener: Receiver<DebugCommandWithArgs>,
     client_sender: Sender<Vec<u8>>,
+    pub compress_sent_data: bool,
 }
 
 impl Server {
@@ -18,6 +19,7 @@ impl Server {
             running: true,
             console_listener: console_listener,
             client_sender: client_sender,
+            compress_sent_data: true,
         }
     }
 
@@ -46,7 +48,7 @@ impl Server {
         let raw_len = encoded_packet.len();
 
         // compress if large enough
-        let encoded_packet: Vec<u8> = if raw_len > 100 {
+        let encoded_packet: Vec<u8> = if raw_len > 100 && self.compress_sent_data {
             let max_compressed_size = lz4_flex::block::get_maximum_output_size(raw_len);
             let mut compressed_buffer = vec![0u8; max_compressed_size];
 
