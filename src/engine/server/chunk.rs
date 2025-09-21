@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use glam::IVec2;
-use noise_functions::{Noise, OpenSimplex2};
+use noise_functions::{modifiers::Frequency, Noise, OpenSimplex2};
 
 use crate::engine::{common::{Block, ChunkMesh, PacketChunk, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
 
@@ -19,41 +19,33 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn generate_chunk(position: &IVec2) -> Chunk {
+    pub fn generate_chunk(position: &IVec2, noise_generator: &Frequency<OpenSimplex2, noise_functions::Constant>) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
-        let mut middleground = BlockArray::filled_basic_air();
         let chunk_world_x = position.x * CHUNK_SIZE as i32;
         let chunk_world_y = position.y * CHUNK_SIZE as i32;
 
         for i in 0..CHUNK_BLOCK_COUNT as usize {
             let x = i % CHUNK_SIZE as usize;
             let y = i / CHUNK_SIZE as usize;
+            let world_x = x as i32 + chunk_world_x;
+            let world_y = y as i32 + chunk_world_y;
 
             // Foreground sampling
 
-            let fg_noise = OpenSimplex2.sample3([(x as i32 + chunk_world_x) as f32, (y as i32 + chunk_world_y) as f32, 0.0]);
-            let fg_block_id = ((fg_noise + 1.0) * 16.0) as u16;
-
-            if fg_block_id != 16 && i < 64 {
-                println!("chunk {}x {}y || Block id: {} || world {}x {}y", position.x, position.y, fg_block_id, x, y);
+            let fg_height_base = noise_generator.sample2([world_x as f32, 0.0]) * 6.0;
+            let fg_height_continentalness = noise_generator.sample2([world_x as f32 * 0.3, 100.0]) * 5.0;
+            let fg_height = fg_height_base * fg_height_continentalness;
+            if fg_height > world_y as f32 {
+                let fg_block_id = (fg_height + 1.0) as u32;
+                foreground.set_block_id_byindex(i, fg_block_id);
+                foreground.set_block_type_byindex(i, BlockType::Tile);
             }
-            
-            foreground.set_block_id_byindex(i, fg_block_id);
-            foreground.set_block_type_byindex(i, BlockType::Tile);
-
-            // Middleground sampling
-
-            let mg_noise = OpenSimplex2.sample3([(x as i32 + chunk_world_x) as f32, (y as i32 + chunk_world_y) as f32, 1.0]);
-            let mg_block_id = ((mg_noise + 1.0) * 16.0) as u16;
-
-            middleground.set_block_id_byindex(i, mg_block_id);
-            foreground.set_block_type_byindex(i, BlockType::Tile);
         }
 
         return Chunk { 
             foreground: (foreground),
-            middleground: (middleground),
-            background: (BlockArray::filled_basic_wall()),
+            middleground: (BlockArray::filled_basic_air()),
+            background: (BlockArray::filled_basic_air()),
             players: (HashSet::new()),
             entites: (HashSet::new())
         }
@@ -65,7 +57,7 @@ impl Chunk {
         self.get_block_array_mut(layer).set_block_type(chunk_relative_pos, new_type);
     }
 
-    pub fn change_block_property_id(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, new_id: u16) {
+    pub fn change_block_property_id(&mut self, chunk_relative_pos: ChunkRelativePos, layer: LayerType, new_id: u32) {
         self.get_block_array_mut(layer).set_block_id(chunk_relative_pos, new_id);
     }
 
