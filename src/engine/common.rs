@@ -20,34 +20,37 @@ impl ChunkRelativePos {
     }
 }
 
+// The order of this is reversed compared to the normal chunk to account
+// for drawing order. This way, the background gets drawn first, then
+// the middleground, and lastly the foreground
 #[repr(C)]
 #[derive(Clone, Copy, Serialize, Deserialize, Encode, Decode, Debug, Zeroable, Pod)]
 pub struct ChunkMesh {
     #[serde(with = "serde_arrays")]
-    pub foreground: [Block; CHUNK_BLOCK_COUNT as usize],
+    pub background: [Block; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
     pub middleground: [Block; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
-    pub background: [Block; CHUNK_BLOCK_COUNT as usize],
+    pub foreground: [Block; CHUNK_BLOCK_COUNT as usize],
 }
 
 impl From<&PacketChunk> for ChunkMesh {
     fn from(packet: &PacketChunk) -> Self {
         ChunkMesh {
-            foreground: convert_layer_to_aos_mesh(
-                packet.foreground_blockid,
-                packet.foreground_blocktype,
-                packet.foreground_textureindex,
+            background: convert_layer_to_aos_mesh(
+                packet.background_blockid,
+                packet.background_blocktype,
+                packet.background_textureindex,
             ),
             middleground: convert_layer_to_aos_mesh(
                 packet.middleground_blockid,
                 packet.middleground_blocktype,
                 packet.middleground_textureindex,
             ),
-            background: convert_layer_to_aos_mesh(
-                packet.background_blockid,
-                packet.background_blocktype,
-                packet.background_textureindex,
+            foreground: convert_layer_to_aos_mesh(
+                packet.foreground_blockid,
+                packet.foreground_blocktype,
+                packet.foreground_textureindex,
             ),
         }
     }
