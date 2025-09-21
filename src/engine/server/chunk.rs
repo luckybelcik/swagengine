@@ -22,8 +22,8 @@ impl Chunk {
     pub fn generate_chunk(position: &IVec2) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
         let mut middleground = BlockArray::filled_basic_air();
-        let chunk_world_x: usize = (position.x * CHUNK_SIZE as i32) as usize;
-        let chunk_world_y: usize = (position.y * CHUNK_SIZE as i32) as usize;
+        let chunk_world_x = position.x * CHUNK_SIZE as i32;
+        let chunk_world_y = position.y * CHUNK_SIZE as i32;
 
         for i in 0..CHUNK_BLOCK_COUNT as usize {
             let x = i % CHUNK_SIZE as usize;
@@ -31,17 +31,23 @@ impl Chunk {
 
             // Foreground sampling
 
-            let fg_noise = OpenSimplex2.sample3([(x + chunk_world_x) as f32, (y + chunk_world_y) as f32, 0.0]);
+            let fg_noise = OpenSimplex2.sample3([(x as i32 + chunk_world_x) as f32, (y as i32 + chunk_world_y) as f32, 0.0]);
             let fg_block_id = ((fg_noise + 1.0) * 16.0) as u16;
 
+            if fg_block_id != 16 && i < 64 {
+                println!("chunk {}x {}y || Block id: {} || world {}x {}y", position.x, position.y, fg_block_id, x, y);
+            }
+            
             foreground.set_block_id_byindex(i, fg_block_id);
+            foreground.set_block_type_byindex(i, BlockType::Tile);
 
             // Middleground sampling
 
-            let mg_noise = OpenSimplex2.sample3([(x + chunk_world_x) as f32, (y + chunk_world_y) as f32, 1.0]);
+            let mg_noise = OpenSimplex2.sample3([(x as i32 + chunk_world_x) as f32, (y as i32 + chunk_world_y) as f32, 1.0]);
             let mg_block_id = ((mg_noise + 1.0) * 16.0) as u16;
 
             middleground.set_block_id_byindex(i, mg_block_id);
+            foreground.set_block_type_byindex(i, BlockType::Tile);
         }
 
         return Chunk { 
@@ -109,7 +115,7 @@ fn convert_layer_to_aos(layer: BlockArray) -> [Block; CHUNK_BLOCK_COUNT as usize
         Block {
             x: (i % CHUNK_SIZE as usize) as u8,
             y: (i / CHUNK_SIZE as usize) as u8,
-            block_id: layer.block_id[i],
+            block_id: layer.block_id[i] as u32,
             block_type: layer.block_type[i] as u8,
             texture_index: layer.texture_index[i],
         }
