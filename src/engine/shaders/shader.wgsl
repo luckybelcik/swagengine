@@ -67,7 +67,15 @@ fn fs_main(
         discard;
     }
 
-    let norm_id: f32 = f32(in.block_id) / 32.0;
+    var color: vec3<f32>;
 
-    return vec4<f32>(norm_id, 0.0, 0.0, 1.0);
+    switch in.block_id {
+        case 0u: { color = vec3(0.45, 0.44, 0.42); } // Stone
+        case 1u: { color = vec3(0.32, 0.24, 0.13); } // Dirt
+        case 2u: { color = vec3(0.30, 0.62, 0.13); } // Grass
+        case 3u: { color = vec3(0.30, 0.42, 0.75); } // Water
+        default: { color = vec3(0.00, 0.00, 0.00); } // None
+    }
+
+    return vec4<f32>(color, 1.0);
 }

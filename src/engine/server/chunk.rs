@@ -40,10 +40,20 @@ impl Chunk {
             let world_y = y as i32 + chunk_world_y;
 
             let fg_height = pregenerated_base_height[x] + pregenerated_continental_height[x];
-            if fg_height > world_y as f32 {
+
+            // World painting!!! :D (adding block types)
+            // If sampled tile is below ground
+            if fg_height >= world_y as f32 {
                 let tiles_below_surface = fg_height as i32 - world_y;
-                let fg_block_id = (fg_height + 1.0) as u32;
+                let fg_block_id = match tiles_below_surface {
+                    0 => 2,     // Grass
+                    1..=5 => 1, // Dirt
+                    _ => 0,     // Stone
+                };
                 foreground.set_block_id_byindex(i, fg_block_id);
+                foreground.set_block_type_byindex(i, BlockType::Tile);
+            } else if world_y <= 0 { // If above ground but below or at y0
+                foreground.set_block_id_byindex(i, 3); // 3 = water
                 foreground.set_block_type_byindex(i, BlockType::Tile);
             }
         }
