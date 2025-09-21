@@ -155,7 +155,7 @@ impl Client {
                     println!("Got message {}!", message)
                 },
                 ServerPacket::Ping => {
-                    println!("Got pinged!")
+                    // todo Don't know what to put here yet
                 }
             }
         }
