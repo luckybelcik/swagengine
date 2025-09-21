@@ -1,0 +1,1 @@
+pub const ZOOM_SPEED: f32 = 0.1;

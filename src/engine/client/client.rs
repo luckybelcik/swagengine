@@ -1,6 +1,6 @@
-use crate::engine::{client::{client_chunk::ClientChunk, state::State}, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, PacketHeader, ServerPacket}, time::Time};
+use crate::engine::{client::{client_chunk::ClientChunk, constants::ZOOM_SPEED, state::State}, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, PacketHeader, ServerPacket}, time::Time};
 use glam::IVec2;
-use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
+use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, MouseScrollDelta, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
 
 pub struct Client {
@@ -12,6 +12,7 @@ pub struct Client {
     player_uuid: u64,
     player_nickname: String,
     loaded_chunks: HashMap<IVec2, ClientChunk>,
+    zoom_factor: f32,
 }
 
 impl Client {
@@ -25,6 +26,7 @@ impl Client {
             player_uuid: fastrand::u64(..),
             player_nickname: "playerboy".to_string(),
             loaded_chunks: HashMap::new(),
+            zoom_factor: 1.0,
         }
     }
 
@@ -74,7 +76,11 @@ impl ApplicationHandler for Client {
                         },
                     ..
                 } => {
-                    self.on_key_pressed(*key_code);
+                    self.on_key_pressed(key_code);
+                },
+                WindowEvent::MouseWheel { device_id: _, delta, phase: _ 
+                } => {
+                    self.on_mouse_scrolled(delta);
                 }
 
                 _ => {
@@ -100,7 +106,7 @@ impl Client {
         }
     }
 
-    fn on_key_pressed(&mut self, key: KeyCode) {
+    fn on_key_pressed(&mut self, key: &KeyCode) {
         match key {
         KeyCode::KeyP => {
             let fps = self.time.average_fps();
@@ -111,6 +117,20 @@ impl Client {
         }
         _ => {}
         }
+    }
+
+    fn on_mouse_scrolled(&mut self, delta: &MouseScrollDelta) {
+        let scroll_amount = match delta {
+            winit::event::MouseScrollDelta::LineDelta(_x, y) => *y,
+            
+            winit::event::MouseScrollDelta::PixelDelta(position) => {
+                position.y as f32 * 0.1 
+            }
+        };
+
+        let zoom_change_factor = 1.0 + (scroll_amount * ZOOM_SPEED);
+
+        self.zoom_factor *= zoom_change_factor;
     }
 
     fn on_handle_command(&mut self) {
@@ -189,6 +209,10 @@ impl Client {
 
     pub fn get_chunks(&self) -> Vec<&ClientChunk> {
         self.loaded_chunks.values().collect()
+    }
+
+    pub fn get_zoom_factor(&self) -> f32 {
+        self.zoom_factor
     }
 }
 

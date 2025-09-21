@@ -8,6 +8,7 @@ struct VertexOutput {
 struct PushConstants {
     chunk_pos: vec2<i32>,
     window_size: vec2<f32>,
+    zoom_factor: f32,
 };
 
 var<push_constant> pc: PushConstants;
@@ -46,10 +47,12 @@ fn vs_main(
     let TILE_PIXEL_SIZE: f32 = 16.0;
     
     // Apply scaling
-    let final_x = world_pos.x * TILE_PIXEL_SIZE / pc.window_size.x;
-    let final_y = world_pos.y * TILE_PIXEL_SIZE / pc.window_size.y;
+    var final_pos: vec2<f32> = world_pos * TILE_PIXEL_SIZE / pc.window_size;
 
-    out.clip_position = vec4<f32>(final_x, final_y, 0.0, 1.0);
+    // Apply zoom
+    final_pos = final_pos * pc.zoom_factor;
+
+    out.clip_position = vec4<f32>(final_pos.x, final_pos.y, 0.0, 1.0);
     out.block_id = block_id;
     out.block_type = block_type;
     out.texture_index = texture_index;
