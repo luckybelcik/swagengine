@@ -28,12 +28,16 @@ impl Chunk {
         const CONTINENTAL_SPARSE_FACTOR: usize = 4;
         const CONTINENTAL_SPARSE_POINTS: usize = (CHUNK_SIZE as usize / CONTINENTAL_SPARSE_FACTOR) + 1;
         let mut sparse_continental_height: [f32; CONTINENTAL_SPARSE_POINTS] = [0.0; CONTINENTAL_SPARSE_POINTS];
+        let mut sparse_continental_volatile: [f32; CONTINENTAL_SPARSE_POINTS] = [0.0; CONTINENTAL_SPARSE_POINTS];
+        let mut sparse_continental_detail: [f32; CONTINENTAL_SPARSE_POINTS] = [0.0; CONTINENTAL_SPARSE_POINTS];
 
         // Sample only in the sparse points
         for i in 0..CONTINENTAL_SPARSE_POINTS {
             let sparse_x = i * CONTINENTAL_SPARSE_FACTOR;
             let world_x = sparse_x as i32 + chunk_world_x;
-            sparse_continental_height[i] = noise_generators.continental.sample2([world_x as f32, 100.0]) * 35.0;
+            sparse_continental_height[i] = noise_generators.continental_main.sample2([world_x as f32, 250.0]) * 15.0;
+            sparse_continental_volatile[i] = ((noise_generators.continental_detail.sample2([world_x as f32, 500.0])).abs() + 0.2).powi(6).max(1.0) * 10.0;
+            sparse_continental_detail[i] = noise_generators.continental_detail.sample2([world_x as f32, 750.0]) * 80.0;
         }
 
         let mut pregenerated_base_height: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize];
@@ -51,14 +55,22 @@ impl Chunk {
             let index_p1 = i / CONTINENTAL_SPARSE_FACTOR;
             let index_p2 = index_p1 + 1;
 
-            let val_p1 = sparse_continental_height[index_p1];
-            let val_p2 = sparse_continental_height[index_p2];
-
             // Get interpolation factor & lerp
             let t = (x % CONTINENTAL_SPARSE_FACTOR) as f32 / CONTINENTAL_SPARSE_FACTOR as f32;
-            let interpolated_value = val_p1 * (1.0 - t) + val_p2 * t;
 
-            pregenerated_continental_height[x] = interpolated_value;
+            let p1 = sparse_continental_height[index_p1];
+            let p2 = sparse_continental_height[index_p2];
+            let main_interpolated = p1 * (1.0 - t) + p2 * t;
+
+            let p1 = sparse_continental_volatile[index_p1];
+            let p2 = sparse_continental_volatile[index_p2];
+            let volatile_interpolated = p1 * (1.0 - t) + p2 * t;
+
+            let p1 = sparse_continental_detail[index_p1];
+            let p2 = sparse_continental_detail[index_p2];
+            let detail_interpolated = p1 * (1.0 - t) + p2 * t;
+
+            pregenerated_continental_height[x] = main_interpolated + detail_interpolated + volatile_interpolated;
         }
 
         for i in 0..CHUNK_BLOCK_COUNT as usize {
@@ -66,7 +78,8 @@ impl Chunk {
             let y = i / CHUNK_SIZE as usize;
             let world_y = y as i32 + chunk_world_y;
 
-            let fg_height = pregenerated_base_height[x] + pregenerated_continental_height[x];
+            // Add a number here to artificially raise the terrain so there's fewer lakes ----------vvv
+            let fg_height = pregenerated_base_height[x] + pregenerated_continental_height[x] + 10.0;
 
             // World painting!!! :D (adding block types)
             // If sampled tile is below ground

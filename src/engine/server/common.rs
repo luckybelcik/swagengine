@@ -99,14 +99,16 @@ pub enum LayerType {
 
 pub struct BasicNoiseGenerators {
     pub base: Fbm<Frequency<Seeded<OpenSimplex2>, noise_functions::Constant>>,
-    pub continental: Frequency<Seeded<OpenSimplex2>, noise_functions::Constant>,
+    pub continental_main: Frequency<Seeded<OpenSimplex2>, noise_functions::Constant>,
+    pub continental_detail: Frequency<Seeded<OpenSimplex2>, noise_functions::Constant>,
 }
 
 impl BasicNoiseGenerators {
     pub fn new(seed: i32) -> BasicNoiseGenerators {
         BasicNoiseGenerators {
             base: OpenSimplex2.seed(seed).frequency(0.025).fbm(3, 0.62, 1.89),
-            continental: OpenSimplex2.seed(seed).frequency(0.00125)
+            continental_main: OpenSimplex2.seed(seed).frequency(0.00025),
+            continental_detail: OpenSimplex2.seed(seed).frequency(0.00250),
         }
     }
 }
