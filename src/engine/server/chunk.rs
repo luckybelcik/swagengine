@@ -38,7 +38,7 @@ impl Chunk {
             let sparse_x = i * CONTINENTAL_SPARSE_FACTOR;
             let world_x = sparse_x as i32 + chunk_world_x;
             sparse_continental_height[i] = noise_generators.continental_main.sample2([world_x as f32, 250.0]) * 15.0;
-            sparse_continental_volatile[i] = ((noise_generators.continental_detail.sample2([world_x as f32, 500.0])).abs() + 0.2).powi(6).max(1.0) * 10.0;
+            sparse_continental_volatile[i] = ((noise_generators.continental_detail.sample2([world_x as f32, 500.0])).abs() + 0.1).powi(6).max(1.0) * 20.0;
             sparse_continental_detail[i] = noise_generators.continental_detail.sample2([world_x as f32, 750.0]) * 80.0;
         }
 
