@@ -1,4 +1,4 @@
-use crate::{engine::{command_registry::{error_dimension_not_found, error_not_enough_arguments, error_wrong_type, CommandDependency, CommandEnvironment, DebugCommand}, server::constants::CHUNK_BLOCK_COUNT}};
+use crate::engine::{command_registry::{error_dimension_not_found, error_not_enough_arguments, error_wrong_type, CommandDependency, CommandEnvironment, DebugCommand}, server::{constants::CHUNK_BLOCK_COUNT, world::Dimension}};
 
 pub fn create_server_commands() -> Vec<DebugCommand> {
     let mut commands = Vec::new();
@@ -39,6 +39,46 @@ pub fn create_server_commands() -> Vec<DebugCommand> {
                 for key in keys {
                     println!("{}", key);
                 }
+            }
+        },
+        command_environment: CommandEnvironment::Server,
+    });
+
+    commands.push(DebugCommand {
+        name: "resetdimension",
+        aliases: &["rdim"],
+        description: "Returns all dimension names.",
+        execute: |dependency, _args| {
+            if let CommandDependency::Server(server) = dependency {
+                let Some(dimension_arg) = _args.first() else {
+                    error_not_enough_arguments();
+                    return;
+                };
+
+                let Some(dimension) = server.get_dimension(dimension_arg) else {
+                    error_dimension_not_found();
+                    return;
+                };
+
+                let mut seed: i32 = 0;
+                if let Some(arg) = _args.get(1) {
+                    match arg.parse::<i32>() {
+                        Ok(seed_in) => seed = seed_in,
+                        Err(_) => {
+                            error_wrong_type();
+                            return;
+                        }
+                    }
+                } else {
+                    seed = fastrand::i32(..);
+                    println!("No seed provided, using random: {seed}");
+                }
+
+                let name = dimension.name.clone();
+                server.dimensions.remove(&name);
+                let mut new_dimension = Dimension::new_basic_dimension(seed);
+                new_dimension.name = name.clone();
+                server.dimensions.insert(name, new_dimension);
             }
         },
         command_environment: CommandEnvironment::Server,
