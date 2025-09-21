@@ -174,6 +174,9 @@ impl Client {
                 ServerPacket::Message(message) => {
                     println!("Got message {}!", message)
                 },
+                ServerPacket::ReloadChunks => {
+                    self.loaded_chunks.clear();
+                },
                 ServerPacket::Ping => {
                     // todo Don't know what to put here yet
                 }

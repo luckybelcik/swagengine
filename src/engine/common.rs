@@ -134,6 +134,7 @@ pub struct BlockChange {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug)]
 pub enum ServerPacket {
     Ping,
+    ReloadChunks,
     Message(String),
     BlockChange(((i64, i64), BlockChange)),
     Chunk(((i32, i32), Box<PacketChunk>)),

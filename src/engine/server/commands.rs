@@ -1,4 +1,4 @@
-use crate::engine::{command_registry::{error_dimension_not_found, error_not_enough_arguments, error_wrong_type, CommandDependency, CommandEnvironment, DebugCommand}, server::{constants::CHUNK_BLOCK_COUNT, world::Dimension}};
+use crate::engine::{command_registry::{error_dimension_not_found, error_not_enough_arguments, error_wrong_type, CommandDependency, CommandEnvironment, DebugCommand}, common::ServerPacket, server::{constants::CHUNK_BLOCK_COUNT, world::Dimension}};
 
 pub fn create_server_commands() -> Vec<DebugCommand> {
     let mut commands = Vec::new();
@@ -79,6 +79,7 @@ pub fn create_server_commands() -> Vec<DebugCommand> {
                 let mut new_dimension = Dimension::new_basic_dimension(seed);
                 new_dimension.name = name.clone();
                 server.dimensions.insert(name, new_dimension);
+                server.send_packet(ServerPacket::ReloadChunks);
             }
         },
         command_environment: CommandEnvironment::Server,
