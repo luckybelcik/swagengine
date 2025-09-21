@@ -117,9 +117,9 @@ impl From<&Chunk> for PacketChunk {
 #[repr(C)]
 #[derive(Clone, Copy, Serialize, Deserialize, Encode, Decode, Debug, Zeroable, Pod)]
 pub struct Block {
+    pub block_id: u32,
     pub x: u8,
     pub y: u8,
-    pub block_id: u16,
     pub block_type: u8,
     pub texture_index: u8,
 }
