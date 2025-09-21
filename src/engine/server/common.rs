@@ -5,11 +5,11 @@ use crate::engine::{common::ChunkRelativePos, server::constants::{CHUNK_BLOCK_CO
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, Encode, Decode)]
 pub enum BlockType {
-    Air,
-    Tile,
-    Wall,
-    Sprite,
-    TileEntity,
+    Air = 0,
+    Tile = 1,
+    Wall = 2,
+    Sprite = 3,
+    TileEntity = 4,
 }
 
 /*  
@@ -18,16 +18,11 @@ pub enum BlockType {
 /   idk what in the tile entity type lol i gotta find some use
 */ 
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Clone, Copy)]
 pub struct BlockArray {
-    #[serde(with = "serde_arrays")]
     pub block_type: [BlockType; CHUNK_BLOCK_COUNT as usize],
-    #[serde(with = "serde_arrays")]
-    pub block_id: [u16; CHUNK_BLOCK_COUNT as usize],
-    #[serde(with = "serde_arrays")]
+    pub block_id: [u32; CHUNK_BLOCK_COUNT as usize],
     pub texture_index: [u8; CHUNK_BLOCK_COUNT as usize],
-    #[serde(with = "serde_arrays")]
-    pub damage: [u8; CHUNK_BLOCK_COUNT as usize],
 }
 
 impl BlockArray {
@@ -39,11 +34,11 @@ impl BlockArray {
         self.block_type[(chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x) as usize] = block_type;
     }
 
-    pub fn set_block_id_byindex(&mut self, index: usize, id: u16) {
+    pub fn set_block_id_byindex(&mut self, index: usize, id: u32) {
         self.block_id[index] = id;
     }
 
-    pub fn set_block_id(&mut self, chunk_relative_pos: ChunkRelativePos, id: u16) {
+    pub fn set_block_id(&mut self, chunk_relative_pos: ChunkRelativePos, id: u32) {
         self.block_id[(chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x) as usize] = id;
     }
 
@@ -55,27 +50,17 @@ impl BlockArray {
         self.texture_index[(chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x) as usize] = texture_index;
     }
 
-    pub fn set_block_damage_byindex(&mut self, index: usize, damage: u8) {
-        self.damage[index] = damage;
-    }
-
-    pub fn set_block_damage(&mut self, chunk_relative_pos: ChunkRelativePos, damage: u8) {
-        self.damage[(chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x) as usize] = damage;
-    }
-
     pub fn clear_block_byindex(&mut self, index: usize) {
         self.block_type[index] = BlockType::Air;
         self.block_id[index] = 0;
         self.texture_index[index] = 0;
-        self.damage[index] = 0;
     }
 
     pub fn clear_block(&mut self, chunk_relative_pos: ChunkRelativePos) {
-        let pos = chunk_relative_pos.y * CHUNK_SIZE + chunk_relative_pos.x;
+        let pos = chunk_relative_pos.y as usize * CHUNK_SIZE as usize + chunk_relative_pos.x as usize;
         self.block_type[pos as usize] = BlockType::Air;
         self.block_id[pos as usize] = 0;
         self.texture_index[pos as usize] = 0;
-        self.damage[pos as usize] = 0;
     }
 
     pub fn filled_basic_tile() -> BlockArray {
@@ -83,7 +68,6 @@ impl BlockArray {
             block_type: [BlockType::Tile; CHUNK_BLOCK_COUNT as usize],
             block_id: ([1; CHUNK_BLOCK_COUNT as usize]),
             texture_index: ([0; CHUNK_BLOCK_COUNT as usize]),
-            damage: ([0; CHUNK_BLOCK_COUNT as usize])
         }
     }
 
@@ -92,7 +76,6 @@ impl BlockArray {
             block_type: [BlockType::Wall; CHUNK_BLOCK_COUNT as usize],
             block_id: ([1; CHUNK_BLOCK_COUNT as usize]),
             texture_index: ([0; CHUNK_BLOCK_COUNT as usize]),
-            damage: ([0; CHUNK_BLOCK_COUNT as usize])
         }
     }
 
@@ -101,7 +84,6 @@ impl BlockArray {
             block_type: [BlockType::Air; CHUNK_BLOCK_COUNT as usize],
             block_id: ([0; CHUNK_BLOCK_COUNT as usize]),
             texture_index: ([0; CHUNK_BLOCK_COUNT as usize]),
-            damage: ([0; CHUNK_BLOCK_COUNT as usize])
         }
     }
 }

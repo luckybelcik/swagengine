@@ -4,7 +4,7 @@ use std::{collections::HashMap, sync::{mpsc::{Receiver, Sender}, LazyLock}, thre
 
 use winit::{event_loop::{EventLoop, ControlFlow}};
 
-use crate::engine::{client::client::Client, command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, common::{BlockChange, ChunkMesh, ServerPacket}, server::{common::{BlockType, LayerType}, constants::TICK_RATE, server::Server}};
+use crate::engine::{client::client::Client, command_registry::{self, CommandEnvironment, CommandRegistry, DebugCommand, DebugCommandWithArgs}, common::{BlockChange, ChunkMesh, PacketChunk, ServerPacket}, server::{common::{BlockType, LayerType}, constants::TICK_RATE, server::Server}};
 
 
 fn main() {
@@ -65,32 +65,17 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
     let mut _ticks: u128 = 0;
 
     while server.is_running() {
-        // Logic
         server.process_commands();
         server.on_tick();
         
-        // Send a dummy message to the main thread to show it's ticking
-        // Later on, this will be a message with updated game state
         if _ticks % 60 == 0 {
-            server.send_packet(ServerPacket::Message("tick".to_string()));
-
             server.send_packet(ServerPacket::Ping);
 
             for dimension in server.dimensions.values() {
                 for (position, chunk) in dimension.get_chunks() {
-                    server.send_packet(ServerPacket::ChunkMesh(((position.x, position.y), Box::new(ChunkMesh {
-                        foreground: chunk.foreground,
-                        middleground: chunk.middleground,
-                        background: chunk.background,
-                    }))));
+                    server.send_packet(ServerPacket::Chunk(((position.x, position.y), Box::new(PacketChunk::from(chunk)))));
                 }
             }
-
-            server.send_packet(ServerPacket::BlockChange(((12, 34), BlockChange {
-                layer: LayerType::Foreground,
-                block_type: BlockType::Tile,
-                block_id: 5,
-            })))
         }
 
         // Increment tick count

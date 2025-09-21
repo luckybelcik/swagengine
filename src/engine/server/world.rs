@@ -2,6 +2,7 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use dashmap::DashMap;
 use glam::{IVec2, UVec2};
 use hecs::World;
+use noise_functions::{modifiers::Frequency, Noise, OpenSimplex2};
 
 use crate::engine::{components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::chunk::{self, Chunk}};
 
@@ -10,6 +11,7 @@ pub struct Dimension {
     pub size: UVec2,
     ecs_world: hecs::World,
     chunks: HashMap<IVec2, Chunk>,
+    noise_generator: Frequency<OpenSimplex2, noise_functions::Constant>,
     pub players: HashMap<PlayerID, hecs::Entity>,
     player_tasks: DashMap<AliveTaskKey, AliveTask>,
     entities: HashMap<EntityID, hecs::Entity>,
@@ -18,20 +20,23 @@ pub struct Dimension {
 
 impl Dimension {
     pub fn new_basic_dimension() -> Dimension {
+        let noise_generator: Frequency<OpenSimplex2, noise_functions::Constant> = OpenSimplex2::default()
+            .frequency(0.025);
         return Dimension { 
-            name: ("basic_dimension".to_string()),
-            size: (UVec2 { x: (100), y: (100) }),
-            ecs_world: (World::new()),
-            chunks: (HashMap::new()),
-            players: (HashMap::new()),
-            player_tasks: (DashMap::new()),
-            entities: (HashMap::new()),
-            entity_tasks: (DashMap::new()),
+            name: "basic_dimension".to_string(),
+            size: UVec2 { x: (100), y: (100) },
+            ecs_world: World::new(),
+            chunks: HashMap::new(),
+            noise_generator,
+            players: HashMap::new(),
+            player_tasks: DashMap::new(),
+            entities: HashMap::new(),
+            entity_tasks: DashMap::new(),
         }
     }
 
     pub fn load_chunks(&mut self) {
-        let generated_size = 2;
+        let generated_size = 4;
 
         let half_size = generated_size / 2;
 
@@ -68,7 +73,7 @@ impl Dimension {
         } else if self.chunk_at(&chunk_pos) {
             // println!("Chunk already exists at {:?}", &chunk_pos)
         } else {
-            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos);
+            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.noise_generator);
             self.chunks.insert(
                 chunk_pos,
                 chunk
@@ -83,7 +88,7 @@ impl Dimension {
         let mut chunks = HashMap::new();
 
         loop {
-            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos);
+            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.noise_generator);
             chunks_generated += 1;
             chunks.insert(
                 chunk_pos.clone(),

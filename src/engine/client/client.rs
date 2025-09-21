@@ -1,4 +1,4 @@
-use crate::engine::{client::state::State, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, ServerPacket}, time::Time};
+use crate::engine::{client::{client_chunk::ClientChunk, state::State}, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, PacketHeader, ServerPacket}, time::Time};
 use glam::IVec2;
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
@@ -11,7 +11,7 @@ pub struct Client {
     pub client_config: ClientConfig,
     player_uuid: u64,
     player_nickname: String,
-    loaded_chunks: HashMap<IVec2, ChunkMesh>,
+    loaded_chunks: HashMap<IVec2, ClientChunk>,
 }
 
 impl Client {
@@ -34,18 +34,10 @@ impl Client {
         self.on_handle_server_packet();
         self.on_update_frame();
         self.on_render();
-        if let Some(state) = &mut self.state {
-            state.get_window().request_redraw();
-        }
     }
 
     fn resize(&mut self, size: &PhysicalSize<u32> ) {
         if let Some(state) = &mut self.state {
-            // Break early if either sizes are 0 (prevents a crash)
-            if size.height == 0 || size.width == 0 {
-                return;
-            }
-
             state.resize(*size);
         }
     }
@@ -102,9 +94,9 @@ impl Client {
         // Input/UI/scripting here
     }
 
-    fn on_render(&mut self) {
-        if let Some(state) = &mut self.state {
-            state.render();
+    fn on_render(&self) {
+        if let Some(state) = &self.state {
+            state.render(self);
         }
     }
 
@@ -129,16 +121,31 @@ impl Client {
 
     fn on_handle_server_packet(&mut self) {
         while let Ok(raw_packet) = self.server_listener.try_recv() {
-            let (packet, bytes_consumed) = bincode::decode_from_slice(&raw_packet, bincode::config::standard()).unwrap();
-            println!("v Bytes read: {} bytes", bytes_consumed);
+            // decode to packet header
+            let (packet, _bytes_consumed): (PacketHeader, usize) = bincode::decode_from_slice(&raw_packet, bincode::config::standard()).unwrap();
+
+            let is_compressed = packet.is_compressed;
+            let original_size = packet.original_size;
+
+            let packet: ServerPacket = if is_compressed {
+                let decompressed_packet = lz4_flex::decompress(&packet.data, original_size).unwrap();
+
+                let (packet, _bytes) = bincode::decode_from_slice(&decompressed_packet, bincode::config::standard()).unwrap();
+
+                packet
+            } else {
+                let (packet, _bytes) = bincode::decode_from_slice(&packet.data, bincode::config::standard()).unwrap();
+
+                packet
+            };
+
             match packet {
-                ServerPacket::ChunkMesh(mesh) => {
-                    let coord = IVec2::new(mesh.0.0, mesh.0.1);
+                ServerPacket::Chunk(packet) => {
+                    let coord = IVec2::new(packet.0.0, packet.0.1);
+                    let mesh = ChunkMesh::from(&*packet.1);
                     if self.loaded_chunks.contains_key(&coord) {
-                        println!("Got mesh already at {}x {}y!", mesh.0.0, mesh.0.1);
                     } else {
-                        println!("Got mesh at position {}x {}y!", mesh.0.0, mesh.0.1);
-                        self.loaded_chunks.insert(coord, *mesh.1);
+                        self.loaded_chunks.insert(coord, ClientChunk::create(coord, mesh, self.state.as_ref().expect("666 demon evil client error").get_device()));
                     }
                 },
                 ServerPacket::BlockChange(block_change) => {
@@ -148,7 +155,7 @@ impl Client {
                     println!("Got message {}!", message)
                 },
                 ServerPacket::Ping => {
-                    println!("Got pinged!")
+                    // todo Don't know what to put here yet
                 }
             }
         }
@@ -178,6 +185,10 @@ impl Client {
 
     pub fn get_nickname(&self) -> &String {
         return &self.player_nickname;
+    }
+
+    pub fn get_chunks(&self) -> Vec<&ClientChunk> {
+        self.loaded_chunks.values().collect()
     }
 }
 
