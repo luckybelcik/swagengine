@@ -13,6 +13,7 @@ pub struct Chunk {
     pub foreground: BlockArray,
     pub middleground: BlockArray,
     pub background: BlockArray,
+    total_block_count: u64,
 
     players: HashSet<PlayerID>,
     entites: HashSet<EntityID>,
@@ -21,6 +22,7 @@ pub struct Chunk {
 impl Chunk {
     pub fn generate_chunk(position: &IVec2, noise_generators: &BasicNoiseGenerators) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
+        let mut total_block_count: u64 = 0;
         let chunk_world_x = position.x * CHUNK_SIZE as i32;
         let chunk_world_y = position.y * CHUNK_SIZE as i32;
 
@@ -92,16 +94,19 @@ impl Chunk {
                 };
                 foreground.set_block_id_byindex(i, fg_block_id);
                 foreground.set_block_type_byindex(i, BlockType::Tile);
+                total_block_count += 1;
             } else if world_y <= 0 { // If above ground but below or at y0
                 foreground.set_block_id_byindex(i, 3); // 3 = water
                 foreground.set_block_type_byindex(i, BlockType::Tile);
+                total_block_count += 1;
             }
         }
 
         return Chunk { 
-            foreground: (foreground),
+            foreground,
             middleground: (BlockArray::filled_basic_air()),
             background: (BlockArray::filled_basic_air()),
+            total_block_count,
             players: (HashSet::new()),
             entites: (HashSet::new())
         }
@@ -147,6 +152,10 @@ impl Chunk {
                 return &self.background; 
             },
         }
+    }
+
+    pub fn get_total_block_count(&self) -> u64 {
+        self.total_block_count
     }
 
     pub fn to_mesh(&self) -> ChunkMesh {
