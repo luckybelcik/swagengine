@@ -1,4 +1,4 @@
-use crate::engine::{client::{common::ClientChunk, state::State}, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, PacketHeader, ServerPacket}, time::Time};
+use crate::engine::{client::{client_chunk::ClientChunk, state::State}, command_registry::{self, DebugCommandWithArgs}, common::{ChunkMesh, PacketHeader, ServerPacket}, time::Time};
 use glam::IVec2;
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use std::{collections::HashMap, sync::{mpsc::Receiver, Arc}};
@@ -94,9 +94,9 @@ impl Client {
         // Input/UI/scripting here
     }
 
-    fn on_render(&mut self) {
-        if let Some(state) = &mut self.state {
-            state.render();
+    fn on_render(&self) {
+        if let Some(state) = &self.state {
+            state.render(self);
         }
     }
 
@@ -122,7 +122,7 @@ impl Client {
     fn on_handle_server_packet(&mut self) {
         while let Ok(raw_packet) = self.server_listener.try_recv() {
             // decode to packet header
-            let (packet, bytes_consumed): (PacketHeader, usize) = bincode::decode_from_slice(&raw_packet, bincode::config::standard()).unwrap();
+            let (packet, _bytes_consumed): (PacketHeader, usize) = bincode::decode_from_slice(&raw_packet, bincode::config::standard()).unwrap();
 
             let is_compressed = packet.is_compressed;
             let original_size = packet.original_size;
@@ -139,15 +139,12 @@ impl Client {
                 packet
             };
 
-            println!("v Bytes read: {} bytes", bytes_consumed);
             match packet {
                 ServerPacket::Chunk(packet) => {
                     let coord = IVec2::new(packet.0.0, packet.0.1);
                     let mesh = ChunkMesh::from(&*packet.1);
                     if self.loaded_chunks.contains_key(&coord) {
-                        println!("Got mesh already at {}x {}y!", coord.x, coord.y);
                     } else {
-                        println!("Got mesh at position {}x {}y!", coord.x, coord.y);
                         self.loaded_chunks.insert(coord, ClientChunk::create(coord, mesh, self.state.as_ref().expect("666 demon evil client error").get_device()));
                     }
                 },
@@ -188,6 +185,10 @@ impl Client {
 
     pub fn get_nickname(&self) -> &String {
         return &self.player_nickname;
+    }
+
+    pub fn get_chunks(&self) -> Vec<&ClientChunk> {
+        self.loaded_chunks.values().collect()
     }
 }
 
