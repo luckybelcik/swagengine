@@ -24,14 +24,41 @@ impl Chunk {
         let chunk_world_x = position.x * CHUNK_SIZE as i32;
         let chunk_world_y = position.y * CHUNK_SIZE as i32;
 
+        // Stuff used for sparse generation and interpolation for the continental noise
+        const CONTINENTAL_SPARSE_FACTOR: usize = 4;
+        const CONTINENTAL_SPARSE_POINTS: usize = (CHUNK_SIZE as usize / CONTINENTAL_SPARSE_FACTOR) + 1;
+        let mut sparse_continental_height: [f32; CONTINENTAL_SPARSE_POINTS] = [0.0; CONTINENTAL_SPARSE_POINTS];
+
+        // Sample only in the sparse points
+        for i in 0..CONTINENTAL_SPARSE_POINTS {
+            let sparse_x = i * CONTINENTAL_SPARSE_FACTOR;
+            let world_x = sparse_x as i32 + chunk_world_x;
+            sparse_continental_height[i] = noise_generators.continental.sample2([world_x as f32, 100.0]) * 35.0;
+        }
+
         let mut pregenerated_base_height: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize];
         let mut pregenerated_continental_height: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize];
         
+        // Base height pregeneration && sparse point interpolation
         for i in 0..CHUNK_SIZE as usize {
+            //* Pregeneration
             let x = i % CHUNK_SIZE as usize;
             let world_x = x as i32 + chunk_world_x;
             pregenerated_base_height[i] = noise_generators.base.sample2([world_x as f32, 0.0]) * 6.0;
-            pregenerated_continental_height[i] = noise_generators.continental.sample2([world_x as f32, 100.0]) * 50.0;
+
+            //* Interpolation
+            // Get points & presampled values
+            let index_p1 = i / CONTINENTAL_SPARSE_FACTOR;
+            let index_p2 = index_p1 + 1;
+
+            let val_p1 = sparse_continental_height[index_p1];
+            let val_p2 = sparse_continental_height[index_p2];
+
+            // Get interpolation factor & lerp
+            let t = (x % CONTINENTAL_SPARSE_FACTOR) as f32 / CONTINENTAL_SPARSE_FACTOR as f32;
+            let interpolated_value = val_p1 * (1.0 - t) + val_p2 * t;
+
+            pregenerated_continental_height[x] = interpolated_value;
         }
 
         for i in 0..CHUNK_BLOCK_COUNT as usize {
