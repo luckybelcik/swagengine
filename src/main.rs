@@ -65,15 +65,10 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
     let mut _ticks: u128 = 0;
 
     while server.is_running() {
-        // Logic
         server.process_commands();
         server.on_tick();
         
-        // Send a dummy message to the main thread to show it's ticking
-        // Later on, this will be a message with updated game state
         if _ticks % 60 == 0 {
-            server.send_packet(ServerPacket::Message("tick".to_string()));
-
             server.send_packet(ServerPacket::Ping);
 
             for dimension in server.dimensions.values() {
@@ -81,12 +76,6 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
                     server.send_packet(ServerPacket::Chunk(((position.x, position.y), Box::new(PacketChunk::from(chunk)))));
                 }
             }
-
-            server.send_packet(ServerPacket::BlockChange(((12, 34), BlockChange {
-                layer: LayerType::Foreground,
-                block_type: BlockType::Tile,
-                block_id: 5,
-            })))
         }
 
         // Increment tick count
