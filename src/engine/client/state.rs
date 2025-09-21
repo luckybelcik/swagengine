@@ -1,8 +1,11 @@
 use std::sync::Arc;
+use wgpu::util::DeviceExt;
 
 use winit::
     window::Window
 ;
+
+use crate::engine::{client::{client::Client, client_chunk::ClientChunk}, server::constants::CHUNK_BLOCK_COUNT};
 
 pub struct State {
     surface: wgpu::Surface<'static>,
@@ -13,6 +16,8 @@ pub struct State {
     size: winit::dpi::PhysicalSize<u32>,
     surface_format: wgpu::TextureFormat,
     window: Arc<Window>,
+    chunk_offset_uniform: wgpu::Buffer,
+    chunk_offset_uniform_bind_group: wgpu::BindGroup,
 }
 
 impl State {
@@ -65,10 +70,45 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
 
+        let chunk_offset_uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Chunk Offset Buffer"),
+            contents: bytemuck::bytes_of(&[0 as i32; 2]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let chunk_offset_uniform_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("chunk_offset_uniform_bind_group_layout"),
+        });
+
+        let chunk_offset_uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &chunk_offset_uniform_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: chunk_offset_uniform.as_entire_binding(),
+                }
+            ],
+            label: Some("chunk_offset_uniform_bind_group"),
+        });
+
         let render_pipeline_layout =
            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                label: Some("Render Pipeline Layout"),
-               bind_group_layouts: &[],
+               bind_group_layouts: &[
+                &chunk_offset_uniform_bind_group_layout
+               ],
                push_constant_ranges: &[],
            });
         
@@ -78,7 +118,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[],
+                buffers: &[ClientChunk::get_desc()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -121,17 +161,11 @@ impl State {
             size,
             surface,
             surface_format,
+            chunk_offset_uniform,
+            chunk_offset_uniform_bind_group,
         };
 
         state
-    }
-
-    pub fn get_window(&self) -> &Window {
-        &self.window
-    }
-
-    pub fn get_device(&self) -> &wgpu::Device {
-        &self.device
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -145,7 +179,7 @@ impl State {
         }
     }
 
-    pub fn render(&mut self) {
+    pub fn render(&self, client: &Client) {
         self.window.request_redraw();
 
         let surface_texture = self.surface.get_current_texture().expect("failed to acquire next swapchain texture");
@@ -174,18 +208,32 @@ impl State {
                 occlusion_query_set: None,
             });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1);
-        }
-
-        // draw commands here
-
-        {
-            
+            render_pass.set_pipeline(&self.render_pipeline);     
+            render_pass.set_bind_group(0, &self.chunk_offset_uniform_bind_group, &[]);
+            for chunk in client.get_chunks() {
+                chunk.prepare_for_draw(self, &mut render_pass);
+                render_pass.draw(0..6, 0..(CHUNK_BLOCK_COUNT as u32 * 3));
+            }
         }
 
         self.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
         surface_texture.present();
+    }
+
+    pub fn get_window(&self) -> &Window {
+        &self.window
+    }
+
+    pub fn get_device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    pub fn get_queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
+    pub fn get_chunk_offset_buffer(&self) -> &wgpu::Buffer {
+        &self.chunk_offset_uniform
     }
 }
