@@ -26,9 +26,12 @@ impl ClientChunk {
         }
     }
 
-    pub fn prepare_for_draw(&self, state: &State, render_pass: &mut RenderPass) {
+    pub fn prepare_for_draw(&self, render_pass: &mut RenderPass) {
         let pos: [i32; 2] = [self.position.x * CHUNK_SIZE as i32, self.position.y * CHUNK_SIZE as i32];
-        state.get_queue().write_buffer(state.get_chunk_offset_buffer(), 0, bytemuck::bytes_of(&pos));
+        render_pass.set_push_constants(
+            wgpu::ShaderStages::VERTEX,
+            0,
+            bytemuck::bytes_of(&pos));
         render_pass.set_vertex_buffer(0, self.buffer.slice(..));
     }
 
