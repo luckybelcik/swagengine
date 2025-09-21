@@ -57,7 +57,7 @@ impl From<&PacketChunk> for ChunkMesh {
 }
 
 fn convert_layer_to_aos_mesh(
-    block_ids: [u16; CHUNK_BLOCK_COUNT as usize],
+    block_ids: [u32; CHUNK_BLOCK_COUNT as usize],
     block_types: [u8; CHUNK_BLOCK_COUNT as usize],
     texture_indices: [u8; CHUNK_BLOCK_COUNT as usize],
 ) -> [Block; CHUNK_BLOCK_COUNT as usize] {
@@ -77,19 +77,19 @@ fn convert_layer_to_aos_mesh(
 #[derive(Clone, Copy, Serialize, Deserialize, Encode, Decode, Debug, Zeroable, Pod)]
 pub struct PacketChunk {
     #[serde(with = "serde_arrays")]
-    pub foreground_blockid: [u16; CHUNK_BLOCK_COUNT as usize],
+    pub foreground_blockid: [u32; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
     pub foreground_blocktype: [u8; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
     pub foreground_textureindex: [u8; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
-    pub middleground_blockid: [u16; CHUNK_BLOCK_COUNT as usize],
+    pub middleground_blockid: [u32; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
     pub middleground_blocktype: [u8; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
     pub middleground_textureindex: [u8; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
-    pub background_blockid: [u16; CHUNK_BLOCK_COUNT as usize],
+    pub background_blockid: [u32; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
     pub background_blocktype: [u8; CHUNK_BLOCK_COUNT as usize],
     #[serde(with = "serde_arrays")]
