@@ -5,7 +5,12 @@ struct VertexOutput {
     @location(2) @interpolate(flat) texture_index: u32,
 };
 
-var<push_constant> chunk_pos: vec2<i32>;
+struct PushConstants {
+    chunk_pos: vec2<i32>,
+    window_size: vec2<f32>,
+};
+
+var<push_constant> pc: PushConstants;
 
 @vertex
 fn vs_main(
@@ -33,20 +38,18 @@ fn vs_main(
 
     var world_pos: vec2<f32>;
     let tile_pos = vec2<f32>(f32(position.x), f32(position.y));
-    let chunk_offset = vec2<f32>(f32(chunk_pos.x), f32(chunk_pos.y));
+    let chunk_offset = vec2<f32>(f32(pc.chunk_pos.x), f32(pc.chunk_pos.y));
 
-    let tile_world_origin = tile_pos + chunk_offset; 
+    // Apply tile position and chunk offset
+    world_pos = local_pos + tile_pos + chunk_offset;
 
-    // Apply tile position
-    world_pos = local_pos + tile_pos;
+    let TILE_PIXEL_SIZE: f32 = 16.0;
+    
+    // Apply scaling
+    let final_x = world_pos.x * TILE_PIXEL_SIZE / pc.window_size.x;
+    let final_y = world_pos.y * TILE_PIXEL_SIZE / pc.window_size.y;
 
-    // Apply chunk offset
-    world_pos = world_pos + chunk_offset;
-
-    // Apply zoom (const for now)
-    world_pos = world_pos * 0.01;
-
-    out.clip_position = vec4<f32>(world_pos.x, world_pos.y, 0.0, 1.0);
+    out.clip_position = vec4<f32>(final_x, final_y, 0.0, 1.0);
     out.block_id = block_id;
     out.block_type = block_type;
     out.texture_index = texture_index;

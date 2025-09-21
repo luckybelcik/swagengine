@@ -41,7 +41,7 @@ impl State {
                 label: None,
                 required_features: wgpu::Features::PUSH_CONSTANTS,
                 required_limits: wgpu::Limits {
-                    max_push_constant_size: 8,
+                    max_push_constant_size: 16,
                     ..Default::default()
                 },
                 memory_hints: Default::default(),
@@ -79,7 +79,7 @@ impl State {
                 push_constant_ranges: &[
                     wgpu::PushConstantRange {
                         stages: wgpu::ShaderStages::VERTEX,
-                        range: 0..8,
+                        range: 0..16,
                     }
                 ],
             });
@@ -179,6 +179,12 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+            let window_size = self.get_window().inner_size();
+            let window_size = [window_size.width as f32, window_size.height as f32];
+            render_pass.set_push_constants(
+            wgpu::ShaderStages::VERTEX,
+            8,
+            bytemuck::bytes_of(&window_size));
             for chunk in client.get_chunks() {
                 chunk.prepare_for_draw(&mut render_pass);
                 render_pass.draw(0..6, 0..(CHUNK_BLOCK_COUNT as u32 * 3));
