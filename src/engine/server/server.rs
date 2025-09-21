@@ -12,7 +12,7 @@ pub struct Server {
 impl Server {
     pub fn start_server(console_listener: Receiver<DebugCommandWithArgs>, client_sender: Sender<Vec<u8>>) -> Server {
         let mut starting_dimensions: HashMap<String, Dimension> = HashMap::new();
-        let basic_dimension: Dimension = Dimension::new_basic_dimension();
+        let basic_dimension: Dimension = Dimension::new_basic_dimension(fastrand::i32(..));
         starting_dimensions.insert(basic_dimension.name.clone(), basic_dimension);
         return Server {
             dimensions: starting_dimensions,

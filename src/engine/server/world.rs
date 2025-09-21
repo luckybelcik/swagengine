@@ -19,7 +19,7 @@ pub struct Dimension {
 }
 
 impl Dimension {
-    pub fn new_basic_dimension() -> Dimension {
+    pub fn new_basic_dimension(seed: i32) -> Dimension {
         let noise_generator: Frequency<OpenSimplex2, noise_functions::Constant> = OpenSimplex2::default()
             .frequency(0.025);
         return Dimension { 
@@ -27,7 +27,7 @@ impl Dimension {
             size: UVec2 { x: (100), y: (100) },
             ecs_world: World::new(),
             chunks: HashMap::new(),
-            noise_generators: BasicNoiseGenerators::new(),
+            noise_generators: BasicNoiseGenerators::new(seed),
             players: HashMap::new(),
             player_tasks: DashMap::new(),
             entities: HashMap::new(),
