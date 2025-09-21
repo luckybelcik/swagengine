@@ -5,7 +5,6 @@ struct VertexOutput {
     @location(2) @interpolate(flat) texture_index: u32,
 };
 
-@push_constant
 var<push_constant> chunk_pos: vec2<i32>;
 
 @vertex
