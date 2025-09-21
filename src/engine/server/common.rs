@@ -1,4 +1,5 @@
 use bincode::{Encode, Decode};
+use noise_functions::{modifiers::{Fbm, Frequency}, Noise, OpenSimplex2};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{common::ChunkRelativePos, server::constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}};
@@ -94,4 +95,18 @@ pub enum LayerType {
     Foreground,
     Middleground,
     Background
+}
+
+pub struct BasicNoiseGenerators {
+    pub base: Fbm<Frequency<OpenSimplex2, noise_functions::Constant>>,
+    pub continental: Frequency<OpenSimplex2, noise_functions::Constant>,
+}
+
+impl BasicNoiseGenerators {
+    pub fn new() -> BasicNoiseGenerators {
+        BasicNoiseGenerators {
+            base: OpenSimplex2::default().frequency(0.025).fbm(3, 0.62, 1.89),
+            continental: OpenSimplex2::default().frequency(0.00125)
+        }
+    }
 }

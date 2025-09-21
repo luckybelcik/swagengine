@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use glam::IVec2;
 use noise_functions::{modifiers::Frequency, Noise, OpenSimplex2};
 
-use crate::engine::{common::{Block, ChunkMesh, PacketChunk, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos, PacketChunk}, components::alive::{EntityID, PlayerID}, server::{common::{BasicNoiseGenerators, BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
 
 pub struct HeapChunk {
     pub chunk: Box<Chunk>,
@@ -19,23 +19,29 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn generate_chunk(position: &IVec2, noise_generator: &Frequency<OpenSimplex2, noise_functions::Constant>) -> Chunk {
+    pub fn generate_chunk(position: &IVec2, noise_generators: &BasicNoiseGenerators) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
         let chunk_world_x = position.x * CHUNK_SIZE as i32;
         let chunk_world_y = position.y * CHUNK_SIZE as i32;
 
+        let mut pregenerated_base_height: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize];
+        let mut pregenerated_continental_height: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize];
+        
+        for i in 0..CHUNK_SIZE as usize {
+            let x = i % CHUNK_SIZE as usize;
+            let world_x = x as i32 + chunk_world_x;
+            pregenerated_base_height[i] = noise_generators.base.sample2([world_x as f32, 0.0]) * 6.0;
+            pregenerated_continental_height[i] = noise_generators.continental.sample2([world_x as f32, 100.0]) * 50.0;
+        }
+
         for i in 0..CHUNK_BLOCK_COUNT as usize {
             let x = i % CHUNK_SIZE as usize;
             let y = i / CHUNK_SIZE as usize;
-            let world_x = x as i32 + chunk_world_x;
             let world_y = y as i32 + chunk_world_y;
 
-            // Foreground sampling
-
-            let fg_height_base = noise_generator.sample2([world_x as f32, 0.0]) * 6.0;
-            let fg_height_continentalness = noise_generator.sample2([world_x as f32 * 0.3, 100.0]) * 5.0;
-            let fg_height = fg_height_base * fg_height_continentalness;
+            let fg_height = pregenerated_base_height[x] + pregenerated_continental_height[x];
             if fg_height > world_y as f32 {
+                let tiles_below_surface = fg_height as i32 - world_y;
                 let fg_block_id = (fg_height + 1.0) as u32;
                 foreground.set_block_id_byindex(i, fg_block_id);
                 foreground.set_block_type_byindex(i, BlockType::Tile);
