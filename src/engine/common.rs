@@ -63,10 +63,10 @@ fn convert_layer_to_aos_mesh(
 ) -> [Block; CHUNK_BLOCK_COUNT as usize] {
     core::array::from_fn(|i| {
         Block {
-            x: i as u8 % CHUNK_SIZE,
-            y: i as u8 / CHUNK_SIZE,
+            x: (i % CHUNK_SIZE as usize) as u8,
+            y: (i / CHUNK_SIZE as usize) as u8,
             
-            block_id: block_ids[i],
+            block_id: block_ids[i] as u32,
             block_type: block_types[i],
             texture_index: texture_indices[i],
         }
