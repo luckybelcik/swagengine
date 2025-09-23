@@ -2,23 +2,50 @@
     "noise": {
         "base": {
             "frequency": 0.025,
-            "aplitude": 6.0
+            "aplitude": 6.0,
+            "noise_type": "OpenSimplex2",
+            "fbm": false,
+            "blending_mode": "add"
         },
         "continental": {
             "frequency": 0.00025,
-            "aplitude": 30.0
+            "aplitude": 30.0,
+            "noise_type": "OpenSimplex2",
+            "fbm": false,
+            "blending_mode": "add"
         },
         "detail": {
             "frequency": 0.1,
-            "aplitude": 2.0
+            "aplitude": 2.0,
+            "noise_type": "OpenSimplex2",
+            "fbm": {
+                "octaves": 2,
+                "gain": 0.62,
+                "lacunarity": 1.89
+            },
+            "blending_mode": "add"
         },
         "erosion": {
             "frequency": 0.05,
-            "aplitude": 4.0
+            "aplitude": 4.0,
+            "noise_type": "OpenSimplex2",
+            "fbm": {
+                "octaves": 2,
+                "gain": 0.2,
+                "lacunarity": 1.9
+            },
+            "blending_mode": "add"
         },
         "weirdness": {
             "frequency": 0.05,
-            "aplitude": 6.0
+            "aplitude": 6.0,
+            "noise_type": "CellDistanceSq",
+            "fbm": {
+                "octaves": 2,
+                "gain": 0.35,
+                "lacunarity": 2.12
+            },
+            "blending_mode": "add"
         }
     }
 }
