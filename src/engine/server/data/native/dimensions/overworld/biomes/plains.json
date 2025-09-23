@@ -1,0 +1,24 @@
+{
+    "noise": {
+        "base": {
+            "frequency": 0.025,
+            "aplitude": 6.0
+        },
+        "continental": {
+            "frequency": 0.00025,
+            "aplitude": 30.0
+        },
+        "detail": {
+            "frequency": 0.1,
+            "aplitude": 2.0
+        },
+        "erosion": {
+            "frequency": 0.05,
+            "aplitude": 4.0
+        },
+        "weirdness": {
+            "frequency": 0.05,
+            "aplitude": 6.0
+        }
+    }
+}
