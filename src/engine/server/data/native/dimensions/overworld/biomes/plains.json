@@ -1,4 +1,8 @@
 {
+    "properties": {
+        "temperature": 50,
+        "humidity": 50
+    },
     "noise": {
         "base": {
             "frequency": 0.025,
