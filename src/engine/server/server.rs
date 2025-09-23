@@ -1,5 +1,5 @@
 use std::{collections::{hash_map::Keys, HashMap}, sync::mpsc::{Receiver, Sender}};
-use crate::engine::{command_registry::{self, DebugCommandWithArgs}, common::{PacketHeader, ServerPacket}, server::world::Dimension};
+use crate::engine::{command_registry::{self, DebugCommandWithArgs}, common::{get_data_path, PacketHeader, ServerPacket}, server::{data::schema_definitions::DimensionSchema, world::Dimension}};
 
 pub struct Server {
     pub dimensions: HashMap<String, Dimension>,
@@ -7,19 +7,30 @@ pub struct Server {
     console_listener: Receiver<DebugCommandWithArgs>,
     client_sender: Sender<Vec<u8>>,
     pub compress_sent_data: bool,
+    dimension_schemas: Vec<DimensionSchema>
 }
 
 impl Server {
     pub fn start_server(console_listener: Receiver<DebugCommandWithArgs>, client_sender: Sender<Vec<u8>>) -> Server {
-        let mut starting_dimensions: HashMap<String, Dimension> = HashMap::new();
-        let basic_dimension: Dimension = Dimension::new_basic_dimension(fastrand::i32(..));
-        starting_dimensions.insert(basic_dimension.name.clone(), basic_dimension);
+        let dimension_schemas: Vec<DimensionSchema> = match Dimension::load_dimensions(&get_data_path()) {
+            Ok(schemas) => schemas,
+            Err(error) => panic!("Problem opening file: {error:?}")
+        };
+
+        let mut dimensions: HashMap<String, Dimension> = HashMap::new();
+        let seed = fastrand::i32(..);
+
+        for schema in &dimension_schemas {
+            dimensions.insert(schema.name.clone(), Dimension::from_schema(schema, seed));
+        }
+
         return Server {
-            dimensions: starting_dimensions,
+            dimensions,
             running: true,
             console_listener: console_listener,
             client_sender: client_sender,
             compress_sent_data: true,
+            dimension_schemas,
         }
     }
 
@@ -78,6 +89,16 @@ impl Server {
 
     pub fn get_dimension(&self, name: &str) -> Option<&Dimension> {
         return self.dimensions.get(name);
+    }
+
+    pub fn get_dimension_schema(&self, name: &str) -> Option<&DimensionSchema> {
+        for schema in &self.dimension_schemas {
+            if name == schema.name {
+                return Some(schema)
+            }
+        }
+
+        return None
     }
 
     pub fn get_dimension_keys(&self) -> Keys<'_, String, Dimension> {

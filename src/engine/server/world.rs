@@ -1,10 +1,10 @@
-use std::{collections::HashMap, time::{Duration, Instant}};
+use std::{collections::HashMap, path::Path, time::{Duration, Instant}};
 use dashmap::DashMap;
 use glam::{IVec2, UVec2};
 use hecs::World;
 use noise_functions::{modifiers::Frequency, Noise, OpenSimplex2};
 
-use crate::engine::{components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{chunk::{self, Chunk}, common::BasicNoiseGenerators}};
+use crate::engine::{components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{chunk::Chunk, common::BasicNoiseGenerators, data::schema_definitions::DimensionSchema}};
 
 pub struct Dimension {
     pub name: String,
@@ -19,12 +19,10 @@ pub struct Dimension {
 }
 
 impl Dimension {
-    pub fn new_basic_dimension(seed: i32) -> Dimension {
-        let noise_generator: Frequency<OpenSimplex2, noise_functions::Constant> = OpenSimplex2::default()
-            .frequency(0.025);
+    pub fn from_schema(schema: &DimensionSchema, seed: i32) -> Dimension {
         return Dimension { 
-            name: "basic_dimension".to_string(),
-            size: UVec2 { x: (100), y: (100) },
+            name: schema.name.clone(),
+            size: schema.size,
             ecs_world: World::new(),
             chunks: HashMap::new(),
             noise_generators: BasicNoiseGenerators::new(seed),
@@ -48,7 +46,6 @@ impl Dimension {
                 self.try_load_chunk(chunk_pos);
             }
         }
-        
     }
 
     pub fn get_chunks(&self) -> Vec<(&IVec2, &Chunk)> {
@@ -109,5 +106,28 @@ impl Dimension {
         }
 
         return start_time.elapsed();
+    }
+
+    pub fn load_dimensions(data_dir: &Path) -> Result<Vec<DimensionSchema>, Box<dyn std::error::Error>> {
+        let mut dimensions = Vec::new();
+        
+        let dimensions_path = data_dir.join("dimensions");
+
+        for entry in std::fs::read_dir(dimensions_path)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                let dimension_file_path = path.join("dimension.json");
+
+                let file = std::fs::File::open(dimension_file_path)?;
+
+                let dimension: DimensionSchema = serde_json::from_reader(file)?;
+
+                dimensions.push(dimension);
+            }
+        }
+
+        Ok(dimensions)
     }
 }

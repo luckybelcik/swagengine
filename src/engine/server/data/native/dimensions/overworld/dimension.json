@@ -1,4 +1,4 @@
 {
     "name": "overworld",
-    "size": {"x": 100, "y": 100}
+    "size": [100, 100]
 }

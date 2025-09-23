@@ -1,4 +1,4 @@
-use std::array::from_fn;
+use std::{array::from_fn, path::PathBuf};
 
 use bincode::{Encode, Decode};
 use bytemuck::{Pod, Zeroable};
@@ -145,4 +145,9 @@ pub struct PacketHeader {
     pub is_compressed: bool,
     pub original_size: usize,
     pub data: Vec<u8>,
+}
+
+pub fn get_data_path() -> PathBuf {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    PathBuf::from(manifest_dir).join("src/engine/server/data/native")
 }

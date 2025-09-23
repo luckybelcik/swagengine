@@ -1,11 +1,14 @@
+use glam::UVec2;
+use serde::Deserialize;
+
 #[derive(Deserialize)]
-pub struct Dimension {
+pub struct DimensionSchema {
     pub name: String,
     pub size: UVec2,
 }
 
 #[derive(Deserialize)]
-pub struct Biome {
+pub struct BiomeSchema {
     pub noise_functions: Vec<NoiseConfig>,
 }
 
