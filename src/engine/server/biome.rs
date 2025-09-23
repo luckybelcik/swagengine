@@ -75,7 +75,6 @@ impl<'a> BiomeMap<'a> {
     }
 }
 
-
 pub struct Biome {
     pub biome_config: BiomeConfig,
     pub noise_schema: Vec<NoiseConfig>,
