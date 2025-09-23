@@ -9,7 +9,14 @@ pub struct DimensionSchema {
 
 #[derive(Deserialize)]
 pub struct BiomeSchema {
+    pub biome_config: BiomeConfig,
     pub noise_functions: Vec<NoiseConfig>,
+}
+
+#[derive(Deserialize)]
+pub struct BiomeConfig {
+    pub temperature: u8,
+    pub humidity: u8,
 }
 
 #[derive(Deserialize)]
@@ -25,7 +32,6 @@ pub struct NoiseConfig {
 #[derive(Deserialize)]
 pub enum NoiseTypes {
     CellDistance,
-    CellDistanceSq,
     CellValue,
     OpenSimplex2,
     Perlin,
