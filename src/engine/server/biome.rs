@@ -1,6 +1,6 @@
 use noise_functions::{CellDistance, CellValue, Noise, OpenSimplex2, Perlin, Simplex, Value, ValueCubic};
 
-use crate::engine::server::{constants::BIOME_MAP_GRID_SIZE, data::schema_definitions::{BiomeConfig, BiomeSchema, FbmOption, NoiseConfig, NoiseTypes}};
+use crate::engine::server::{constants::BIOME_MAP_GRID_SIZE, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig, NoiseTypes}};
 
 pub struct BiomeRegistry {
     pub biomes: Box<[Biome]>,
@@ -88,8 +88,8 @@ impl Biome {
             };
             let generator = Box::new(generator.frequency(noise_fn.frequency).mul(noise_fn.amplitude)) as Box<dyn Noise>;
             let generator = match &noise_fn.fbm {
-                FbmOption::Enabled(config) => Box::new(generator.fbm(config.octaves, config.gain, config.lacunarity)) as Box<dyn Noise>,
-                FbmOption::Disabled(bool) => generator,
+                Some(config) => Box::new(generator.fbm(config.octaves, config.gain, config.lacunarity)) as Box<dyn Noise>,
+                None => generator,
             };
             noise_generator.push(generator);
         }

@@ -1,55 +1,60 @@
 {
-    "properties": {
+    "biome_config": {
         "temperature": 50,
         "humidity": 50
     },
-    "noise": {
-        "base": {
+    "noise_functions": [
+        {
             "frequency": 0.025,
-            "aplitude": 6.0,
+            "amplitude": 6.0,
             "noise_type": "OpenSimplex2",
-            "fbm": false,
-            "blending_mode": "add"
+            "fbm": null,
+            "blending_mode": "Add",
+            "sparse": null
         },
-        "continental": {
+        {
             "frequency": 0.00025,
-            "aplitude": 30.0,
+            "amplitude": 30.0,
             "noise_type": "OpenSimplex2",
-            "fbm": false,
-            "blending_mode": "add"
+            "fbm": null,
+            "blending_mode": "Add",
+            "sparse": null
         },
-        "detail": {
+        {
             "frequency": 0.1,
-            "aplitude": 2.0,
+            "amplitude": 2.0,
             "noise_type": "OpenSimplex2",
             "fbm": {
                 "octaves": 2,
                 "gain": 0.62,
                 "lacunarity": 1.89
             },
-            "blending_mode": "add"
+            "blending_mode": "Add",
+            "sparse": null
         },
-        "erosion": {
+        {
             "frequency": 0.05,
-            "aplitude": 4.0,
+            "amplitude": 4.0,
             "noise_type": "OpenSimplex2",
             "fbm": {
                 "octaves": 2,
                 "gain": 0.2,
                 "lacunarity": 1.9
             },
-            "blending_mode": "add"
+            "blending_mode": "Add",
+            "sparse": null
         },
-        "weirdness": {
+        {
             "frequency": 0.05,
-            "aplitude": 6.0,
-            "noise_type": "CellDistanceSq",
+            "amplitude": 6.0,
+            "noise_type": "CellDistance",
             "fbm": {
                 "octaves": 2,
                 "gain": 0.35,
                 "lacunarity": 2.12
             },
-            "blending_mode": "add"
+            "blending_mode": "Add",
+            "sparse": null
         }
-    }
+    ]
 }

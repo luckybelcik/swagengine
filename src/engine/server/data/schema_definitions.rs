@@ -24,9 +24,9 @@ pub struct NoiseConfig {
     pub frequency: f32,
     pub amplitude: f32,
     pub noise_type: NoiseTypes,
-    pub fbm: FbmOption,
+    pub fbm: Option<FbmConfig>,
     pub blending_mode: BlendingMode,
-    pub sparse: SparseOption,
+    pub sparse: Option<SparseConfig>,
 }
 
 #[derive(Deserialize)]
@@ -48,26 +48,11 @@ pub struct FbmConfig {
 }
 
 #[derive(Deserialize)]
-#[serde(untagged)]
-pub enum FbmOption {
-    Disabled(bool),
-    Enabled(FbmConfig),
-}
-
-#[derive(Deserialize)]
 pub struct SparseConfig {
     pub sparse_factor: u8,
 }
 
 #[derive(Deserialize)]
-#[serde(untagged)]
-pub enum SparseOption {
-    Disabled(bool),
-    Enabled(SparseConfig),
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
 pub enum BlendingMode {
     Add,
     Subtract,

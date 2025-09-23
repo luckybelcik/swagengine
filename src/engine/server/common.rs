@@ -2,8 +2,7 @@ use bincode::{Encode, Decode};
 use noise_functions::{modifiers::{Fbm, Frequency, Seeded}, CellDistance, CellDistanceSq, CellValue, Noise, OpenSimplex2, Perlin, Simplex, Value, ValueCubic};
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{common::ChunkRelativePos, server::{constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BiomeSchema, FbmOption, NoiseConfig, NoiseTypes}}};
-use crate::engine::server::data::schema_definitions::SparseOption;
+use crate::engine::{common::ChunkRelativePos, server::{constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig, NoiseTypes}}};
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, Encode, Decode)]
 pub enum BlockType {
