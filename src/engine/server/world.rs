@@ -2,15 +2,15 @@ use std::{collections::HashMap, path::Path, time::{Duration, Instant}};
 use dashmap::DashMap;
 use glam::{IVec2, UVec2};
 use hecs::World;
-use noise_functions::{modifiers::Frequency, Noise, OpenSimplex2};
 
-use crate::engine::{components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{chunk::Chunk, common::BasicNoiseGenerators, data::schema_definitions::DimensionSchema}};
+use crate::engine::{common::get_data_path, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{biome::{Biome, BiomeMap, BiomeRegistry}, chunk::Chunk, common::BasicNoiseGenerators, constants::BIOME_MAP_GRID_SIZE, data::schema_definitions::{BiomeSchema, DimensionSchema}}};
 
 pub struct Dimension {
     pub name: String,
     pub size: UVec2,
     ecs_world: hecs::World,
     chunks: HashMap<IVec2, Chunk>,
+    biome_registry: BiomeRegistry,
     noise_generators: BasicNoiseGenerators,
     pub players: HashMap<PlayerID, hecs::Entity>,
     player_tasks: DashMap<AliveTaskKey, AliveTask>,
@@ -20,11 +20,21 @@ pub struct Dimension {
 
 impl Dimension {
     pub fn from_schema(schema: &DimensionSchema, seed: i32) -> Dimension {
-        return Dimension { 
+        let biomes_result = Self::load_biomes(&schema.name, &get_data_path());
+
+        if let Err(error) = biomes_result {
+            println!("No biomes found for dimension {}", &schema.name);
+            panic!("Error: {}", error);
+        }
+
+        let biome_schemas = biomes_result.unwrap();
+
+        Dimension { 
             name: schema.name.clone(),
             size: schema.size,
             ecs_world: World::new(),
             chunks: HashMap::new(),
+            biome_registry: BiomeRegistry::new(biome_schemas, seed),
             noise_generators: BasicNoiseGenerators::new(seed),
             players: HashMap::new(),
             player_tasks: DashMap::new(),
@@ -129,5 +139,26 @@ impl Dimension {
         }
 
         Ok(dimensions)
+    }
+
+    fn load_biomes(dimension_name: &str, data_dir: &Path) -> Result<Vec<BiomeSchema>, Box<dyn std::error::Error>> {
+        let mut biomes = Vec::new();
+        
+        let biomes_path = data_dir.join("dimensions").join(dimension_name).join("biomes");
+
+        for entry in std::fs::read_dir(biomes_path)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() {
+                let file = std::fs::File::open(path)?;
+
+                let biome: BiomeSchema = serde_json::from_reader(file)?;
+
+                biomes.push(biome);
+            }
+        }
+
+        Ok(biomes)
     }
 }

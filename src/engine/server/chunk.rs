@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
 use glam::IVec2;
-use noise_functions::{modifiers::Frequency, Noise, OpenSimplex2};
+use noise_functions::{Noise};
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos, PacketChunk}, components::alive::{EntityID, PlayerID}, server::{common::{BasicNoiseGenerators, BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{common::{BasicNoiseGenerators, BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
 
 pub struct HeapChunk {
     pub chunk: Box<Chunk>,
