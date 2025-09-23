@@ -6,4 +6,6 @@
 pub const CHUNK_SIZE: u8 = 32;
 pub const CHUNK_BLOCK_COUNT: u16 = CHUNK_SIZE as u16 * CHUNK_SIZE as u16;
 
+pub const BIOME_MAP_GRID_SIZE: usize = 100;
+
 pub const TICK_RATE: u64 = 60;
