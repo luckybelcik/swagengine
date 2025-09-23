@@ -159,10 +159,12 @@ impl Chunk {
             for (config, generator) in biome.noise_schema.iter().zip(biome.noise_generator.iter()) {
                 let generated_height = generator.sample2((world_x as f32, j as f32 * 250.0));
                 match config.blending_mode {
-                    BlendingMode::Add => height += generated_height,
-                    BlendingMode::Subtract => height -= generated_height,
+                    BlendingMode::Mix => height += generated_height,
+                    BlendingMode::MixPositive => height += generated_height.max(0.0),
+                    BlendingMode::MixNegative => height += generated_height.min(0.0),
+                    BlendingMode::Add => height += generated_height.abs(),
+                    BlendingMode::Subtract => height -= generated_height.abs(),
                     BlendingMode::Multiply => height *= generated_height,
-                    BlendingMode::Divide => height /= generated_height,
                 }
                 j += 1;
             }

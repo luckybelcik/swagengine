@@ -54,8 +54,10 @@ pub struct SparseConfig {
 
 #[derive(Deserialize)]
 pub enum BlendingMode {
+    Mix,
+    MixPositive,
+    MixNegative,
     Add,
     Subtract,
     Multiply,
-    Divide,
 }
