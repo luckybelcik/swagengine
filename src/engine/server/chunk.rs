@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use glam::IVec2;
 use noise_functions::{Noise};
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{common::{BasicNoiseGenerators, BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::BiomeMap, common::{BasicNoiseGenerators, BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
 
 pub struct HeapChunk {
     pub chunk: Box<Chunk>,
@@ -20,7 +20,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn generate_chunk(position: &IVec2, noise_generators: &BasicNoiseGenerators) -> Chunk {
+    pub fn generate_chunk_old(position: &IVec2, noise_generators: &BasicNoiseGenerators) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
         let mut total_block_count: u64 = 0;
         let chunk_world_x = position.x * CHUNK_SIZE as i32;
@@ -87,6 +87,88 @@ impl Chunk {
             // If sampled tile is below ground
             if fg_height >= world_y as f32 {
                 let tiles_below_surface = fg_height as i32 - world_y;
+                let fg_block_id = match tiles_below_surface {
+                    0 => 2,     // Grass
+                    1..=5 => 1, // Dirt
+                    _ => 0,     // Stone
+                };
+                foreground.set_block_id_byindex(i, fg_block_id);
+                foreground.set_block_type_byindex(i, BlockType::Tile);
+                total_block_count += 1;
+            } else if world_y <= 0 { // If above ground but below or at y0
+                foreground.set_block_id_byindex(i, 3); // 3 = water
+                foreground.set_block_type_byindex(i, BlockType::Tile);
+                total_block_count += 1;
+            }
+        }
+
+        return Chunk { 
+            foreground,
+            middleground: (BlockArray::filled_basic_air()),
+            background: (BlockArray::filled_basic_air()),
+            total_block_count,
+            players: (HashSet::new()),
+            entites: (HashSet::new())
+        }
+    }
+
+    pub fn generate_chunk(position: &IVec2, biome_map: &BiomeMap) -> Chunk {
+        let mut foreground = BlockArray::filled_basic_air();
+        let mut total_block_count: u64 = 0;
+        let chunk_world_x = position.x * CHUNK_SIZE as i32;
+        let chunk_world_y = position.y * CHUNK_SIZE as i32;
+
+        const BIOME_SPARSE_FACTOR: usize = 4;
+        const BIOME_SPARSE_POINTS: usize = (CHUNK_SIZE as usize / BIOME_SPARSE_FACTOR) + 1;
+        let mut sparse_temperature_points: [f32; BIOME_SPARSE_POINTS] = [50.0; BIOME_SPARSE_POINTS];
+        let mut sparse_humidity_points: [f32; BIOME_SPARSE_POINTS] = [50.0; BIOME_SPARSE_POINTS];
+        let mut temperature: [u8; CHUNK_SIZE as usize] = [0; CHUNK_SIZE as usize];
+        let mut humidity: [u8; CHUNK_SIZE as usize] = [0; CHUNK_SIZE as usize];
+
+        for i in 0..CHUNK_SIZE as usize {
+            let x = i % CHUNK_SIZE as usize;
+            let index_p1 = i / BIOME_SPARSE_FACTOR;
+            let index_p2 = index_p1 + 1;
+
+            let t = (x % BIOME_SPARSE_FACTOR) as f32 / BIOME_SPARSE_FACTOR as f32;
+
+            let p1 = sparse_temperature_points[index_p1];
+            let p2 = sparse_temperature_points[index_p2];
+            let temp = p1 * (1.0 - t) + p2 * t;
+
+            let p1 = sparse_humidity_points[index_p1];
+            let p2 = sparse_humidity_points[index_p2];
+            let hum = p1 * (1.0 - t) + p2 * t;
+
+            temperature[x] = temp as u8;
+            humidity[x] = hum as u8;
+        }
+
+        // todo Random temperature and humidity generation
+
+        for i in 0..CHUNK_BLOCK_COUNT as usize {
+            let x = i % CHUNK_SIZE as usize;
+            let y = i / CHUNK_SIZE as usize;
+            let world_x = x as i32 + chunk_world_x;
+            let world_y = y as i32 + chunk_world_y;
+            let biome = biome_map.get_biome(temperature[x], humidity[x]);
+
+            let mut height = 0.0;
+            let mut j = 0;
+
+            for (config, generator) in biome.noise_schema.iter().zip(biome.noise_generator.iter()) {
+                let generated_height = generator.sample2((world_x as f32, j as f32 * 250.0));
+                match config.blending_mode {
+                    BlendingMode::Add => height += generated_height,
+                    BlendingMode::Subtract => height -= generated_height,
+                    BlendingMode::Multiply => height *= generated_height,
+                    BlendingMode::Divide => height /= generated_height,
+                }
+                j += 1;
+            }
+            
+            if height >= world_y as f32 {
+                let tiles_below_surface = height as i32 - world_y;
                 let fg_block_id = match tiles_below_surface {
                     0 => 2,     // Grass
                     1..=5 => 1, // Dirt

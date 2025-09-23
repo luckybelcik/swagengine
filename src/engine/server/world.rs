@@ -44,8 +44,8 @@ impl Dimension {
     }
 
     pub fn load_chunks(&mut self) {
-        let generated_height = 10;
-        let generated_width = 60;
+        let generated_height = 6;
+        let generated_width = 12;
 
         let half_height = generated_height / 2;
         let half_width = generated_width / 2;
@@ -82,7 +82,7 @@ impl Dimension {
         } else if self.chunk_at(&chunk_pos) {
             // println!("Chunk already exists at {:?}", &chunk_pos)
         } else {
-            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.noise_generators);
+            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.biome_registry.biome_map);
             self.chunks.insert(
                 chunk_pos,
                 chunk
@@ -97,7 +97,7 @@ impl Dimension {
         let mut chunks = HashMap::new();
 
         loop {
-            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.noise_generators);
+            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.biome_registry.biome_map);
             chunks_generated += 1;
             chunks.insert(
                 chunk_pos.clone(),

@@ -1,12 +1,12 @@
 {
     "biome_config": {
-        "temperature": 50,
-        "humidity": 50
+        "temperature": 0,
+        "humidity": 0
     },
     "noise_functions": [
         {
             "frequency": 0.025,
-            "amplitude": 6.0,
+            "amplitude": 20.0,
             "noise_type": "OpenSimplex2",
             "fbm": null,
             "blending_mode": "Add",
@@ -14,7 +14,7 @@
         },
         {
             "frequency": 0.00025,
-            "amplitude": 30.0,
+            "amplitude": 50.0,
             "noise_type": "OpenSimplex2",
             "fbm": null,
             "blending_mode": "Add",
@@ -22,8 +22,8 @@
         },
         {
             "frequency": 0.1,
-            "amplitude": 2.0,
-            "noise_type": "OpenSimplex2",
+            "amplitude": 20.0,
+            "noise_type": "CellValue",
             "fbm": {
                 "octaves": 2,
                 "gain": 0.62,
@@ -33,27 +33,27 @@
             "sparse": null
         },
         {
-            "frequency": 0.05,
-            "amplitude": 4.0,
+            "frequency": 0.005,
+            "amplitude": 12.0,
             "noise_type": "OpenSimplex2",
             "fbm": {
                 "octaves": 2,
                 "gain": 0.2,
                 "lacunarity": 1.9
             },
-            "blending_mode": "Add",
+            "blending_mode": "Subtract",
             "sparse": null
         },
         {
             "frequency": 0.05,
-            "amplitude": 6.0,
+            "amplitude": 2.0,
             "noise_type": "CellDistance",
             "fbm": {
                 "octaves": 2,
                 "gain": 0.35,
                 "lacunarity": 2.12
             },
-            "blending_mode": "Add",
+            "blending_mode": "Multiply",
             "sparse": null
         }
     ]
