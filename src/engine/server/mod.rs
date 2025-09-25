@@ -1,6 +1,7 @@
 pub mod world;
 pub mod server;
 pub mod chunk;
+pub mod chunk_generator;
 pub mod common;
 pub mod constants;
 pub mod commands;
