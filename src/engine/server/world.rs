@@ -1,16 +1,16 @@
-use std::{collections::HashMap, time::{Duration, Instant}};
+use std::{collections::HashMap, path::Path, time::{Duration, Instant}};
 use dashmap::DashMap;
 use glam::{IVec2, UVec2};
 use hecs::World;
-use noise_functions::{modifiers::Frequency, Noise, OpenSimplex2};
 
-use crate::engine::{components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{chunk::{self, Chunk}, common::BasicNoiseGenerators}};
+use crate::engine::{common::get_data_path, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{biome::{Biome, BiomeMap, BiomeRegistry}, chunk::Chunk, common::BasicNoiseGenerators, constants::BIOME_MAP_GRID_SIZE, data::schema_definitions::{BiomeSchema, DimensionSchema}}};
 
 pub struct Dimension {
     pub name: String,
     pub size: UVec2,
     ecs_world: hecs::World,
     chunks: HashMap<IVec2, Chunk>,
+    biome_registry: BiomeRegistry,
     noise_generators: BasicNoiseGenerators,
     pub players: HashMap<PlayerID, hecs::Entity>,
     player_tasks: DashMap<AliveTaskKey, AliveTask>,
@@ -19,14 +19,22 @@ pub struct Dimension {
 }
 
 impl Dimension {
-    pub fn new_basic_dimension(seed: i32) -> Dimension {
-        let noise_generator: Frequency<OpenSimplex2, noise_functions::Constant> = OpenSimplex2::default()
-            .frequency(0.025);
-        return Dimension { 
-            name: "basic_dimension".to_string(),
-            size: UVec2 { x: (100), y: (100) },
+    pub fn from_schema(schema: &DimensionSchema, seed: i32) -> Dimension {
+        let biomes_result = Self::load_biomes(&schema.name, &get_data_path());
+
+        if let Err(error) = biomes_result {
+            println!("No biomes found for dimension {}", &schema.name);
+            panic!("Error: {}", error);
+        }
+
+        let biome_schemas = biomes_result.unwrap();
+
+        Dimension { 
+            name: schema.name.clone(),
+            size: schema.size,
             ecs_world: World::new(),
             chunks: HashMap::new(),
+            biome_registry: BiomeRegistry::new(biome_schemas, seed),
             noise_generators: BasicNoiseGenerators::new(seed),
             players: HashMap::new(),
             player_tasks: DashMap::new(),
@@ -36,8 +44,8 @@ impl Dimension {
     }
 
     pub fn load_chunks(&mut self) {
-        let generated_height = 10;
-        let generated_width = 60;
+        let generated_height = 6;
+        let generated_width = 12;
 
         let half_height = generated_height / 2;
         let half_width = generated_width / 2;
@@ -48,7 +56,6 @@ impl Dimension {
                 self.try_load_chunk(chunk_pos);
             }
         }
-        
     }
 
     pub fn get_chunks(&self) -> Vec<(&IVec2, &Chunk)> {
@@ -75,7 +82,7 @@ impl Dimension {
         } else if self.chunk_at(&chunk_pos) {
             // println!("Chunk already exists at {:?}", &chunk_pos)
         } else {
-            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.noise_generators);
+            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.biome_registry.biome_map);
             self.chunks.insert(
                 chunk_pos,
                 chunk
@@ -90,7 +97,7 @@ impl Dimension {
         let mut chunks = HashMap::new();
 
         loop {
-            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.noise_generators);
+            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.biome_registry.biome_map);
             chunks_generated += 1;
             chunks.insert(
                 chunk_pos.clone(),
@@ -109,5 +116,49 @@ impl Dimension {
         }
 
         return start_time.elapsed();
+    }
+
+    pub fn load_dimensions(data_dir: &Path) -> Result<Vec<DimensionSchema>, Box<dyn std::error::Error>> {
+        let mut dimensions = Vec::new();
+        
+        let dimensions_path = data_dir.join("dimensions");
+
+        for entry in std::fs::read_dir(dimensions_path)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                let dimension_file_path = path.join("dimension.json");
+
+                let file = std::fs::File::open(dimension_file_path)?;
+
+                let dimension: DimensionSchema = serde_json::from_reader(file)?;
+
+                dimensions.push(dimension);
+            }
+        }
+
+        Ok(dimensions)
+    }
+
+    fn load_biomes(dimension_name: &str, data_dir: &Path) -> Result<Vec<BiomeSchema>, Box<dyn std::error::Error>> {
+        let mut biomes = Vec::new();
+        
+        let biomes_path = data_dir.join("dimensions").join(dimension_name).join("biomes");
+
+        for entry in std::fs::read_dir(biomes_path)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() {
+                let file = std::fs::File::open(path)?;
+
+                let biome: BiomeSchema = serde_json::from_reader(file)?;
+
+                biomes.push(biome);
+            }
+        }
+
+        Ok(biomes)
     }
 }

@@ -76,9 +76,16 @@ pub fn create_server_commands() -> Vec<DebugCommand> {
 
                 let name = dimension.name.clone();
                 server.dimensions.remove(&name);
-                let mut new_dimension = Dimension::new_basic_dimension(seed);
-                new_dimension.name = name.clone();
-                server.dimensions.insert(name, new_dimension);
+                let schema = server.get_dimension_schema(&name);
+
+                match schema {
+                    Some(dimension_schema) => {
+                        let mut new_dimension = Dimension::from_schema(dimension_schema, seed);
+                        new_dimension.name = name.clone();
+                        server.dimensions.insert(name, new_dimension);
+                    }
+                    None => println!("No dimension found under the name: {}", &name)
+                }
                 server.send_packet(ServerPacket::ReloadChunks);
             }
         },
