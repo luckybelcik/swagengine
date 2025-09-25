@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::mpsc::{Receiver, Sender}, time::{Duration, Instant}};
+use std::{collections::HashSet, sync::{mpsc::{Receiver, Sender}, Arc, RwLock}, time::{Duration, Instant}};
 
 use glam::IVec2;
 use rayon::iter::IntoParallelRefIterator;
@@ -12,14 +12,16 @@ pub struct ChunkGenerator {
 }
 
 impl ChunkGenerator {
-    pub fn new(biome_registry: BiomeRegistry) -> (ChunkGenerator, Receiver<Chunk>) {
-        let (generator_sender, generator_listener) = std::sync::mpsc::channel::<Chunk>();
+    pub fn new(biome_registry: BiomeRegistry) -> (ChunkGenerator, Receiver<(Chunk, IVec2)>) {
+        let (generator_sender, generator_listener) = std::sync::mpsc::channel::<(Chunk, IVec2)>();
         let (chunkpos_sender, chunkpos_listener) = std::sync::mpsc::channel::<Generate>();
+
+        let arc_registry = Arc::new(RwLock::new(biome_registry));
+        let thread_registry = arc_registry.clone();
 
         std::thread::spawn(move || {
             println!("Chunk generator thread spawned");
             const PARALLEL_THRESHOLD: usize = 4;
-            let biome_map = biome_registry.biome_map;
 
             loop {
                 let command = match chunkpos_listener.recv() {
@@ -39,16 +41,23 @@ impl ChunkGenerator {
 
                         let batch_size = batch.len();
 
-                        let generated_chunks: Vec<Chunk> = if batch_size >= PARALLEL_THRESHOLD {
+                        let generated_chunks: Vec<(IVec2, Chunk)> = if batch_size >= PARALLEL_THRESHOLD {
                             println!("Processing large batch of {} chunks in parallel.", batch_size);
-                            batch.par_iter().map(|&coords| Chunk::generate_chunk(&coords, &biome_map)).collect()
+                            batch.par_iter()
+                                .map(|&coords| {
+                                    let registry_guard = thread_registry.read().unwrap();
+                                    let biome_map = &registry_guard.biome_map; 
+                                    (coords, Chunk::generate_chunk(&coords, biome_map))
+                                }).collect()
                         } else {
                             println!("Processing small batch of {} chunks sequentially.", batch_size);
-                            batch.into_iter().map(|coords| Chunk::generate_chunk(&coords, &biome_map)).collect()
+                            let registry_guard = thread_registry.read().unwrap();
+                            let biome_map = &registry_guard.biome_map; 
+                            batch.into_iter().map(|coords| (coords, Chunk::generate_chunk(&coords, &biome_map))).collect()
                         };
 
-                        for chunk in generated_chunks {
-                            let _ = generator_sender.send(chunk);
+                        for (pos, chunk) in generated_chunks {
+                            let _ = generator_sender.send((chunk, pos));
                         }
                     },
 
@@ -56,6 +65,8 @@ impl ChunkGenerator {
                         let start_time = Instant::now();
                         let mut chunks_generated = 0;
                         let mut chunk_pos = IVec2::new(0, 0);
+                        let registry_guard = thread_registry.read().unwrap();
+                        let biome_map = &registry_guard.biome_map; 
 
                         while chunks_generated < chunk_limit {
                             let _: Chunk = Chunk::generate_chunk(&chunk_pos, &biome_map); 
@@ -93,8 +104,10 @@ impl ChunkGenerator {
     }
 
     pub fn load_chunk(&mut self, chunk_pos: &IVec2) {
-        self.chunks_awaiting_generation.insert(chunk_pos.clone());
-        let _ = self.chunkpos_sender.send(Generate::Chunk(*chunk_pos));
+        // If chunk not already scheduled for generation, generate it
+        if self.chunks_awaiting_generation.insert(chunk_pos.clone()) {
+            let _ = self.chunkpos_sender.send(Generate::Chunk(*chunk_pos));
+        }
     }
 
     pub fn run_test(&self, chunk_limit: u32) {

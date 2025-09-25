@@ -11,7 +11,7 @@ pub struct Dimension {
     ecs_world: hecs::World,
     chunks: HashMap<IVec2, Chunk>,
     chunk_generator: ChunkGenerator,
-    chunk_receiver: Receiver<Chunk>,
+    chunk_receiver: Receiver<(Chunk, IVec2)>,
     pub players: HashMap<PlayerID, hecs::Entity>,
     player_tasks: DashMap<AliveTaskKey, AliveTask>,
     entities: HashMap<EntityID, hecs::Entity>,
@@ -46,8 +46,8 @@ impl Dimension {
     }
 
     pub fn load_chunks(&mut self) {
-        let generated_height = 6;
-        let generated_width = 12;
+        let generated_height = 20;
+        let generated_width = 100;
 
         let half_height = generated_height / 2;
         let half_width = generated_width / 2;
@@ -85,6 +85,12 @@ impl Dimension {
             // println!("Chunk already exists at {:?}", &chunk_pos)
         } else {
             self.chunk_generator.load_chunk(&chunk_pos);
+        }
+    }
+
+    pub fn receive_chunks(&mut self) {
+        while let Ok((chunk, pos)) = self.chunk_receiver.try_recv() {
+            self.chunks.insert(pos, chunk);
         }
     }
 

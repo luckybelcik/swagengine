@@ -71,6 +71,10 @@ fn initialize_server(tx_server_to_client: Sender<Vec<u8>>, rx_console_to_server:
         if _ticks % 60 == 0 {
             server.send_packet(ServerPacket::Ping);
 
+            for dimension in server.dimensions.values_mut() {
+                dimension.receive_chunks();
+            }
+
             for dimension in server.dimensions.values() {
                 for (position, chunk) in dimension.get_chunks() {
                     if chunk.get_total_block_count() != 0 {
