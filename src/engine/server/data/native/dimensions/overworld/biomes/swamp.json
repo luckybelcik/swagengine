@@ -15,7 +15,7 @@
         {
             "frequency": 0.0001,
             "amplitude": 4.0,
-            "noise_type": "CellValue",
+            "noise_type": "Cellular",
             "fbm": null,
             "blending_mode": "Subtract",
             "sparse": null
