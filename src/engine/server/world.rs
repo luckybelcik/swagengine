@@ -1,16 +1,17 @@
-use std::{collections::HashMap, path::Path, time::{Duration, Instant}};
+use std::{collections::HashMap, path::Path, sync::mpsc::Receiver, time::{Duration, Instant}};
 use dashmap::DashMap;
 use glam::{IVec2, UVec2};
 use hecs::World;
 
-use crate::engine::{common::get_data_path, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{biome::{BiomeRegistry}, chunk::Chunk, data::schema_definitions::{BiomeSchema, DimensionSchema}}};
+use crate::engine::{common::get_data_path, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{biome::BiomeRegistry, chunk::Chunk, chunk_generator::ChunkGenerator, data::schema_definitions::{BiomeSchema, DimensionSchema}}};
 
 pub struct Dimension {
     pub name: String,
     pub size: UVec2,
     ecs_world: hecs::World,
     chunks: HashMap<IVec2, Chunk>,
-    biome_registry: BiomeRegistry,
+    chunk_generator: ChunkGenerator,
+    chunk_receiver: Receiver<Chunk>,
     pub players: HashMap<PlayerID, hecs::Entity>,
     player_tasks: DashMap<AliveTaskKey, AliveTask>,
     entities: HashMap<EntityID, hecs::Entity>,
@@ -27,13 +28,16 @@ impl Dimension {
         }
 
         let biome_schemas = biomes_result.unwrap();
+        let biome_registry = BiomeRegistry::new(biome_schemas, seed);
+        let (chunk_generator, chunk_receiver) = ChunkGenerator::new(biome_registry);
 
         Dimension { 
             name: schema.name.clone(),
             size: schema.size,
             ecs_world: World::new(),
             chunks: HashMap::new(),
-            biome_registry: BiomeRegistry::new(biome_schemas, seed),
+            chunk_generator,
+            chunk_receiver,
             players: HashMap::new(),
             player_tasks: DashMap::new(),
             entities: HashMap::new(),
@@ -80,40 +84,12 @@ impl Dimension {
         } else if self.chunk_at(&chunk_pos) {
             // println!("Chunk already exists at {:?}", &chunk_pos)
         } else {
-            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.biome_registry.biome_map);
-            self.chunks.insert(
-                chunk_pos,
-                chunk
-            );
+            self.chunk_generator.load_chunk(&chunk_pos);
         }
     }
 
-    pub fn chunk_load_speed_test(&self, chunk_limit: u32) -> Duration {
-        let start_time = Instant::now();
-        let mut chunks_generated = 0;
-        let mut chunk_pos = IVec2::new(0, 0);
-        let mut chunks = HashMap::new();
-
-        loop {
-            let chunk: Chunk = Chunk::generate_chunk(&chunk_pos, &self.biome_registry.biome_map);
-            chunks_generated += 1;
-            chunks.insert(
-                chunk_pos.clone(),
-                chunk
-            );
-
-            chunk_pos.x += 1;
-            if chunk_pos.x >= 100 {
-                chunk_pos.x = 0;
-                chunk_pos.y += 1;
-            }
-
-            if chunks_generated >= chunk_limit {
-                break;
-            }
-        }
-
-        return start_time.elapsed();
+    pub fn chunk_load_speed_test(&self, chunk_limit: u32) {
+        self.chunk_generator.run_test(chunk_limit);
     }
 
     pub fn load_dimensions(data_dir: &Path) -> Result<Vec<DimensionSchema>, Box<dyn std::error::Error>> {
