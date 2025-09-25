@@ -1,4 +1,4 @@
-use noise_functions::{CellDistance, CellValue, Noise, OpenSimplex2, Perlin, Sample, Simplex, Value, ValueCubic};
+use fastnoise_lite::{FastNoiseLite, NoiseType};
 
 use crate::engine::server::{constants::BIOME_MAP_GRID_SIZE, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig, NoiseTypes}};
 
@@ -78,33 +78,39 @@ impl<'a> BiomeMap<'a> {
 pub struct Biome {
     pub biome_config: BiomeConfig,
     pub noise_schema: Vec<NoiseConfig>,
-    pub noise_generator: Vec<Box<dyn Sample<2>>>,
+    pub noise_generators: Vec<FastNoiseLite>,
 }
 
 impl Biome {
     pub fn from_schema(schema: BiomeSchema, seed: i32) -> Self {
-        let mut noise_generator: Vec<Box<dyn Sample<2> + 'static>> = Vec::new();
+        let mut generators: Vec<FastNoiseLite> = Vec::new(); 
         for noise_fn in &schema.noise_functions {
-            let generator: Box<dyn Sample<2> + 'static> = match noise_fn.noise_type {
-                NoiseTypes::CellDistance => Box::new(CellDistance::default().seed(seed)) as Box<dyn Sample<2> + 'static>,
-                NoiseTypes::CellValue => Box::new(CellValue::default().seed(seed)) as Box<dyn Sample<2> + 'static>,
-                NoiseTypes::OpenSimplex2 => Box::new(OpenSimplex2.seed(seed)) as Box<dyn Sample<2> + 'static>,
-                NoiseTypes::Perlin => Box::new(Perlin.seed(seed)) as Box<dyn Sample<2> + 'static>,
-                NoiseTypes::Simplex => Box::new(Simplex.seed(seed)) as Box<dyn Sample<2> + 'static>,
-                NoiseTypes::Value => Box::new(Value.seed(seed)) as Box<dyn Sample<2> + 'static>,
-                NoiseTypes::ValueCubic => Box::new(ValueCubic.seed(seed)) as Box<dyn Sample<2> + 'static>,
+            let mut generator = FastNoiseLite::new();
+            match noise_fn.noise_type {
+                NoiseTypes::Cellular => generator.set_noise_type(Some(NoiseType::Cellular)),
+                NoiseTypes::OpenSimplex2 => generator.set_noise_type(Some(NoiseType::OpenSimplex2)),
+                NoiseTypes::Perlin => generator.set_noise_type(Some(NoiseType::Perlin)),
+                NoiseTypes::Value => generator.set_noise_type(Some(NoiseType::Value)),
+                NoiseTypes::ValueCubic => generator.set_noise_type(Some(NoiseType::ValueCubic)),
             };
-            let generator = Box::new(generator.frequency(noise_fn.frequency).mul(noise_fn.amplitude)) as Box<dyn Sample<2> + 'static>;
-            let generator = match &noise_fn.fbm {
-                Some(config) => Box::new(generator.fbm(config.octaves, config.gain, config.lacunarity)) as Box<dyn Sample<2> + 'static>,
-                None => generator,
+
+            generator.set_frequency(Some(noise_fn.frequency));
+           
+            match &noise_fn.fbm {
+                Some(config) => {
+                    generator.set_fractal_octaves(Some(config.octaves as i32));
+                    generator.set_fractal_gain(Some(config.gain));
+                    generator.set_fractal_lacunarity(Some(config.lacunarity));
+                },
+                _ => (),
             };
-            noise_generator.push(generator);
+
+            generators.push(generator);
         }
         Biome {
             biome_config: schema.biome_config,
             noise_schema: schema.noise_functions,
-            noise_generator,
+            noise_generators: generators,
         }
     }
 }

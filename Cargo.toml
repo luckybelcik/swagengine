@@ -18,7 +18,7 @@ bitflags = "2.9.2"
 hecs = "0.10.5"
 dashmap = "6.1.0"
 rayon = "1.11.0"
-noise-functions = "0.8.1"
+fastnoise-lite = "1.1.1"
 fastrand = "2.3.0"
 glam = { version = "0.30.6", features = ["serde"] }
 serde = { version = "1.0.225", features = ["derive"] }

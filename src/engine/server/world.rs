@@ -3,7 +3,7 @@ use dashmap::DashMap;
 use glam::{IVec2, UVec2};
 use hecs::World;
 
-use crate::engine::{common::get_data_path, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{biome::{Biome, BiomeMap, BiomeRegistry}, chunk::Chunk, common::BasicNoiseGenerators, constants::BIOME_MAP_GRID_SIZE, data::schema_definitions::{BiomeSchema, DimensionSchema}}};
+use crate::engine::{common::get_data_path, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{biome::{BiomeRegistry}, chunk::Chunk, data::schema_definitions::{BiomeSchema, DimensionSchema}}};
 
 pub struct Dimension {
     pub name: String,

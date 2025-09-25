@@ -31,11 +31,9 @@ pub struct NoiseConfig {
 
 #[derive(Deserialize)]
 pub enum NoiseTypes {
-    CellDistance,
-    CellValue,
+    Cellular,
     OpenSimplex2,
     Perlin,
-    Simplex,
     Value,
     ValueCubic,
 }

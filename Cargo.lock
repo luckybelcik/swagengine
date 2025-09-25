@@ -11,11 +11,11 @@ dependencies = [
  "bytemuck",
  "dashmap",
  "env_logger",
+ "fastnoise-lite",
  "fastrand",
  "glam",
  "hecs",
  "lz4_flex",
- "noise-functions",
  "pollster",
  "rayon",
  "serde",
@@ -571,6 +571,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastnoise-lite"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e5f3c3cc9081e5d0e18bcd50e80cd33cba47fc22f88a9da9c33ecd1c87ea5c0"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1046,12 +1055,6 @@ checksum = "ee6cda3051665f1fb8d9e08fc35c96d5a244fb1be711a03b71118828afc9a873"
 dependencies = [
  "jni-sys",
 ]
-
-[[package]]
-name = "noise-functions"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3420c74fd988a5c7da54fad9b8dba218f15431833817913d252dc59002c199c5"
 
 [[package]]
 name = "ntapi"
