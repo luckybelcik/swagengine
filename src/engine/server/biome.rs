@@ -94,6 +94,7 @@ impl Biome {
                 NoiseTypes::ValueCubic => generator.set_noise_type(Some(NoiseType::ValueCubic)),
             };
 
+            generator.set_seed(Some(seed));
             generator.set_frequency(Some(noise_fn.frequency));
            
             match &noise_fn.fbm {
