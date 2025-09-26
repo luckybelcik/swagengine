@@ -2,7 +2,7 @@ use std::{collections::HashSet, ptr};
 
 use glam::IVec2;
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{BiomeMap}, common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::BiomeMap, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
 
 pub struct HeapChunk {
     pub chunk: Box<Chunk>,
@@ -19,7 +19,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn generate_chunk(position: &IVec2, biome_map: &BiomeMap) -> Chunk {
+    pub fn generate_chunk(position: &IVec2, biome_map: &BiomeMap, heights_cache: &BakedHeightsCache) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
         let chunk_world_x = position.x * CHUNK_SIZE as i32;
         let chunk_world_y = position.y * CHUNK_SIZE as i32;
@@ -89,24 +89,31 @@ impl Chunk {
 
         let mut total_block_count = 0;
 
+        // If chunk has only one biome, generate (or sample from cache) in 1D
         if !chunk_is_multibiome {
-            let mut precalculated_heights: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize];
-            let base_biome_generator = &base_biome.noise_generators;
-            let base_biome_schema = &base_biome.noise_schema;
+            // Get entry if it exists, otherwise calculate it and insert it
+            let precalculated_heights: [f32; CHUNK_SIZE as usize] = *heights_cache.entry(position.x).or_insert_with(|| {
+                let base_biome_generator = &base_biome.noise_generators;
+                let base_biome_schema = &base_biome.noise_schema;
+                let mut heights: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize]; 
 
-            for x in 0..CHUNK_SIZE {
-                let world_x = x as i32 + chunk_world_x;
+                for x in 0..CHUNK_SIZE {
+                    let world_x = x as i32 + chunk_world_x;
 
-                let mut height = 0.0;
-                let mut j = 0;
+                    let mut height = 0.0;
+                    let mut j = 0;
 
-                for (config, generator) in base_biome_schema.iter().zip(base_biome_generator.iter()) {
-                    let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0) * config.amplitude;
-                    height = apply_blending(height, generated_height, &config.blending_mode);
-                    j += 1;
+                    for (config, generator) in base_biome_schema.iter().zip(base_biome_generator.iter()) {
+                        let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0) * config.amplitude;
+                        height = apply_blending(height, generated_height, &config.blending_mode);
+                        j += 1;
+                    }
+                    heights[x as usize] = height;
                 }
-                precalculated_heights[x as usize] = height;
-            }
+
+                heights
+            });
+            
 
             for i in 0..CHUNK_BLOCK_COUNT as usize {
                 let x = i % CHUNK_SIZE as usize;
