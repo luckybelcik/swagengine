@@ -101,7 +101,7 @@ impl Chunk {
                 let mut j = 0;
 
                 for (config, generator) in base_biome_schema.iter().zip(base_biome_generator.iter()) {
-                    let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0);
+                    let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0) * config.amplitude;
                     height = apply_blending(height, generated_height, &config.blending_mode);
                     j += 1;
                 }
@@ -127,7 +127,7 @@ impl Chunk {
                 let mut j = 0;
 
                 for (config, generator) in biome.noise_schema.iter().zip(biome.noise_generators.iter()) {
-                    let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0);
+                    let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0) * config.amplitude;
                     height = apply_blending(height, generated_height, &config.blending_mode);
                     j += 1;
                 }
