@@ -1,8 +1,10 @@
-use std::{collections::HashSet, ptr};
+use std::{collections::HashSet, ptr, sync::Arc};
 
+use fastnoise_lite::FastNoiseLite;
+use fastrand::Rng;
 use glam::IVec2;
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::BiomeMap, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::BiomeMap, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
 
 pub struct HeapChunk {
     pub chunk: Box<Chunk>,
@@ -19,63 +21,70 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn generate_chunk(position: &IVec2, biome_map: &BiomeMap, heights_cache: &BakedHeightsCache) -> Chunk {
+    pub fn generate_chunk(position: &IVec2, biome_map: &BiomeMap, heights_cache: &BakedHeightsCache, generic_noise: &Arc<FastNoiseLite>, seed: i32) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
+        let mut rng = Rng::with_seed(get_chunk_seed(seed, position));
         let chunk_world_x = position.x * CHUNK_SIZE as i32;
         let chunk_world_y = position.y * CHUNK_SIZE as i32;
+        let empty_ivec = IVec2 { x: 0, y: 0};
+        let mut temperature_points: [IVec2; BIOME_SAMPLE_POINT_AMOUNT] = [empty_ivec; BIOME_SAMPLE_POINT_AMOUNT];
+        let mut humidity_points: [IVec2; BIOME_SAMPLE_POINT_AMOUNT] = [empty_ivec; BIOME_SAMPLE_POINT_AMOUNT];
 
-        const BIOME_SPARSE_FACTOR: usize = 4;
-        const BIOME_SPARSE_POINTS: usize = (CHUNK_SIZE as usize / BIOME_SPARSE_FACTOR) + 1;
-        const BIOME_SPARSE_POINT_COUNT: usize = BIOME_SPARSE_POINTS * BIOME_SPARSE_POINTS;
-        let sparse_temperature_points: [f32; BIOME_SPARSE_POINT_COUNT] = [50.0; BIOME_SPARSE_POINT_COUNT];
-        let sparse_humidity_points: [f32; BIOME_SPARSE_POINT_COUNT] = [50.0; BIOME_SPARSE_POINT_COUNT];
+        {
+            let mut generated_coords: HashSet<IVec2> = HashSet::new();
+            let mut i: usize = 0;
+
+            while i < BIOME_SAMPLE_POINT_AMOUNT * 2 {
+                let x = rng.i32(0..(CHUNK_SIZE as i32));
+                let y = rng.i32(0..(CHUNK_SIZE as i32));
+                    
+                let point = IVec2::new(x, y);
+                    
+                if generated_coords.insert(point) {
+                    if i < BIOME_SAMPLE_POINT_AMOUNT {
+                        temperature_points[i] = point;
+                    } else {
+                        humidity_points[i - BIOME_SAMPLE_POINT_AMOUNT] = point;
+                    }
+                }
+
+                i += 1;
+            }
+
+        }
+
+        type Point = (IVec2, f32);
+        let empty_point: (IVec2, f32) = (empty_ivec, 0.0);
+        let mut sampled_temperature: [(IVec2, f32); _] = [empty_point; BIOME_SAMPLE_POINT_AMOUNT as usize];
+        let mut sampled_humidity: [(IVec2, f32); _] = [empty_point; BIOME_SAMPLE_POINT_AMOUNT as usize];
+
+        for i in 0..BIOME_SAMPLE_POINT_AMOUNT {
+            let temperature_point = temperature_points[i];
+            let world_x = (temperature_point.x + chunk_world_x) as f32;
+            let world_y = (temperature_point.y + chunk_world_y) as f32;
+            sampled_temperature[i] = (temperature_point, (generic_noise.get_noise_3d(world_x, world_y, 250.0) + 1.0 ) * 50.0 );
+
+            
+            let humidity_point = humidity_points[i];
+            let world_x = (humidity_point.x + chunk_world_x) as f32;
+            let world_y = (humidity_point.y + chunk_world_y) as f32;
+            sampled_humidity[i] = (humidity_point, (generic_noise.get_noise_3d(world_x, world_y, 250.0) + 1.0 ) * 50.0 );
+        }
+
         let mut temperature: [u8; CHUNK_BLOCK_COUNT as usize] = [0; CHUNK_BLOCK_COUNT as usize];
         let mut humidity: [u8; CHUNK_BLOCK_COUNT as usize] = [0; CHUNK_BLOCK_COUNT as usize];
 
         for i in 0..CHUNK_BLOCK_COUNT as usize {
             let x = i % CHUNK_SIZE as usize;
             let y = i / CHUNK_SIZE as usize;
+            let block_pos = IVec2 { x: x as i32, y: y as i32 };
 
-            let sx1 = x / BIOME_SPARSE_FACTOR;
-            let sy1 = y / BIOME_SPARSE_FACTOR;
+            let final_temp_f32 = interpolate_idw(block_pos, &sampled_temperature);
+            let final_hum_f32 = interpolate_idw(block_pos, &sampled_humidity);
 
-            let sx2 = sx1 + 1;
-            let sy2 = sy1 + 1;
-
-            let tx = (x % BIOME_SPARSE_FACTOR) as f32 / BIOME_SPARSE_FACTOR as f32;
-            let ty = (y % BIOME_SPARSE_FACTOR) as f32 / BIOME_SPARSE_FACTOR as f32;
-
-            let get_sparse_point = |sx: usize, sy: usize, points: &[f32; BIOME_SPARSE_POINT_COUNT]| -> f32 {
-                let index = sy * BIOME_SPARSE_POINTS + sx;
-                points[index]
-            };
-
-            let p1_temp = get_sparse_point(sx1, sy1, &sparse_temperature_points);
-            let p2_temp = get_sparse_point(sx2, sy1, &sparse_temperature_points);
-            let p3_temp = get_sparse_point(sx1, sy2, &sparse_temperature_points);
-            let p4_temp = get_sparse_point(sx2, sy2, &sparse_temperature_points);
-                
-            let lerp_top_temp = p1_temp * (1.0 - tx) + p2_temp * tx;
-            let lerp_bottom_temp = p3_temp * (1.0 - tx) + p4_temp * tx;
-
-            let final_temp = lerp_top_temp * (1.0 - ty) + lerp_bottom_temp * ty;
-
-            temperature[i] = final_temp as u8;
-
-            let p1_hum = get_sparse_point(sx1, sy1, &sparse_humidity_points);
-            let p2_hum = get_sparse_point(sx2, sy1, &sparse_humidity_points);
-            let p3_hum = get_sparse_point(sx1, sy2, &sparse_humidity_points);
-            let p4_hum = get_sparse_point(sx2, sy2, &sparse_humidity_points);
-
-            let lerp_top_hum = p1_hum * (1.0 - tx) + p2_hum * tx;
-            let lerp_bottom_hum = p3_hum * (1.0 - tx) + p4_hum * tx;
-
-            let final_hum = lerp_top_hum * (1.0 - ty) + lerp_bottom_hum * ty;
-
-            humidity[i] = final_hum as u8;
+            temperature[i] = final_temp_f32 as u8;
+            humidity[i] = final_hum_f32 as u8;
         }
-
-        // todo Random temperature and humidity generation
 
         let mut chunk_is_multibiome = false;
         let base_biome = biome_map.get_biome(temperature[0], humidity[0]);
@@ -247,5 +256,61 @@ fn apply_blending(height: f32, generated_height: f32, blending_mode: &BlendingMo
         BlendingMode::Add => height + generated_height.abs(),
         BlendingMode::Subtract => height - generated_height.abs(),
         BlendingMode::Multiply => height * generated_height,
+    }
+}
+
+#[inline]
+fn splitmix64(mut x: u64) -> u64 {
+    x = x.wrapping_add(0x9E3779B97F4A7C15);
+    let mut z = x;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+    z ^ (z >> 31)
+}
+
+fn get_chunk_seed(world_seed: i32, chunk_pos: &IVec2) -> u64 {
+    let s = world_seed as u32 as u64;
+    let xx = chunk_pos.x as u32 as u64;
+    let yy = chunk_pos.y as u32 as u64;
+    
+    let key = s.wrapping_mul(0xC2B2AE3D27D4EB4F)
+                ^ xx.wrapping_mul(0x165667B19E3779F9)
+                ^ yy.wrapping_mul(0x9E3779B97F4A7C15);
+    splitmix64(key)
+}
+
+const IDW_POWER: f32 = 2.0;
+
+fn interpolate_idw(
+    block_pos_local: IVec2, 
+    sampled_points: &[(IVec2, f32)],
+) -> f32 {
+    let mut total_weight: f32 = 0.0;
+    let mut weighted_sum: f32 = 0.0;
+
+    const EPSILON: f32 = 0.0001; 
+
+    for (point_pos, point_value) in sampled_points.iter() {
+        let dx = block_pos_local.x as f32 - point_pos.x as f32;
+        let dy = block_pos_local.y as f32 - point_pos.y as f32;
+        
+        let distance_sq = dx * dx + dy * dy;
+        
+        if distance_sq < EPSILON {
+            return *point_value;
+        }
+        
+        let distance = distance_sq.sqrt();
+        
+        let weight = 1.0 / distance.powf(IDW_POWER); 
+        
+        weighted_sum += weight * point_value;
+        total_weight += weight;
+    }
+
+    if total_weight > EPSILON {
+        weighted_sum / total_weight
+    } else {
+        sampled_points.first().map(|(_, v)| *v).unwrap_or(0.0) 
     }
 }

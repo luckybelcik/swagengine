@@ -1,7 +1,7 @@
 {
     "biome_config": {
-        "temperature": 0,
-        "humidity": 0
+        "temperature": 75,
+        "humidity": 25
     },
     "noise_functions": [
         {
@@ -54,6 +54,14 @@
                 "lacunarity": 2.12
             },
             "blending_mode": "Multiply",
+            "sparse": null
+        },
+        {
+            "frequency": 0.05,
+            "amplitude": 20.0,
+            "noise_type": "Cellular",
+            "fbm": null,
+            "blending_mode": "Subtract",
             "sparse": null
         }
     ]

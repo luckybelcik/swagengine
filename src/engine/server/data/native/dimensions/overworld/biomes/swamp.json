@@ -1,7 +1,7 @@
 {
     "biome_config": {
-        "temperature": 50,
-        "humidity": 50
+        "temperature": 25,
+        "humidity": 75
     },
     "noise_functions": [
         {
@@ -30,10 +30,10 @@
         },
         {
             "frequency": 0.01,
-            "amplitude": 16.0,
+            "amplitude": 30.0,
             "noise_type": "ValueCubic",
             "fbm": null,
-            "blending_mode": "Multiply",
+            "blending_mode": "Add",
             "sparse": null
         }
     ]
