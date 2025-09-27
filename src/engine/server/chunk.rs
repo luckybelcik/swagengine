@@ -4,7 +4,7 @@ use fastnoise_lite::FastNoiseLite;
 use fastrand::Rng;
 use glam::IVec2;
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::BiomeMap, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
 
 pub struct Chunk {
     pub foreground: BlockArray,
@@ -32,64 +32,17 @@ impl Chunk {
         let (temperature_map, humidity_map) =
             get_temperature_and_humidity_map(sampled_temperature, sampled_humidity);
 
-        let chunk_is_multibiome = check_if_chunk_multibiome(biome_map, &temperature_map, &humidity_map);
+        // Get terrain height
+        let heights: [f32; CHUNK_SIZE as usize] = get_terrain_heights(&chunk_world_pos, biome_map, &temperature_map, &humidity_map, generic_noise, heights_cache, seed);
 
         let mut total_block_count = 0;
 
-        // If chunk has only one biome, generate (or sample from cache) in 1D
-        if !chunk_is_multibiome {
-            // Get entry if it exists, otherwise calculate it and insert it
-            let precalculated_heights: [f32; CHUNK_SIZE as usize] = *heights_cache.entry(position.x).or_insert_with(|| {
-                let biome_of_chunk = biome_map.get_biome(temperature_map[0], humidity_map[0]);
-                let base_biome_generator = &biome_of_chunk.noise_generators;
-                let base_biome_schema = &biome_of_chunk.noise_schema;
-                let mut heights: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize]; 
+        for i in 0..CHUNK_BLOCK_COUNT as usize {
+            let x = i % CHUNK_SIZE as usize;
+            let y = i / CHUNK_SIZE as usize;
+            let world_y = y as i32 + chunk_world_pos.y;
 
-                for x in 0..CHUNK_SIZE {
-                    let world_x = x as i32 + chunk_world_pos.x;
-
-                    let mut height = 0.0;
-                    let mut j = 0;
-
-                    for (config, generator) in base_biome_schema.iter().zip(base_biome_generator.iter()) {
-                        let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0) * config.amplitude;
-                        height = apply_blending(height, generated_height, &config.blending_mode);
-                        j += 1;
-                    }
-                    heights[x as usize] = height;
-                }
-
-                heights
-            });
-            
-
-            for i in 0..CHUNK_BLOCK_COUNT as usize {
-                let x = i % CHUNK_SIZE as usize;
-                let y = i / CHUNK_SIZE as usize;
-                let world_y = y as i32 + chunk_world_pos.y;
-
-                if generate_block_id(precalculated_heights[x as usize], world_y as f32, i, &mut foreground) {total_block_count += 1}
-            }
-        // If chunk has more than one biome, sample biome for every block and then generate the height
-        } else {
-            for i in 0..CHUNK_BLOCK_COUNT as usize {
-                let x = i % CHUNK_SIZE as usize;
-                let y = i / CHUNK_SIZE as usize;
-                let world_x = x as i32 + chunk_world_pos.x;
-                let world_y = y as i32 + chunk_world_pos.y;
-                let biome = biome_map.get_biome(temperature_map[x], humidity_map[x]);
-
-                let mut height = 0.0;
-                let mut j = 0;
-
-                for (config, generator) in biome.noise_schema.iter().zip(biome.noise_generators.iter()) {
-                    let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0) * config.amplitude;
-                    height = apply_blending(height, generated_height, &config.blending_mode);
-                    j += 1;
-                }
-
-                if generate_block_id(height, world_y as f32, i, &mut foreground) {total_block_count += 1}
-            }
+            if generate_block_id(heights[x as usize], world_y as f32, i, &mut foreground) {total_block_count += 1}
         }
 
         return Chunk { 
@@ -243,8 +196,67 @@ fn interpolate_idw(
 
 // We only sample the 1D height noise at the y coordinate 0 to avoid weird artifacts
 // If u wanna know why, DM me and I will explain
-fn get_terrain_height(x: i32, biome_map: &BiomeMap, generic_noise: &Arc<FastNoiseLite>, seed: i32) {
+fn get_terrain_heights(chunk_world_pos: &IVec2, biome_map: &BiomeMap, temperature_map: &[u8; CHUNK_BLOCK_COUNT as usize], humidity_map: &[u8; CHUNK_BLOCK_COUNT as usize], generic_noise: &Arc<FastNoiseLite>, heights_cache: &BakedHeightsCache, seed: i32)
+-> [f32; CHUNK_SIZE as usize] {
+    let chunk_pos = IVec2 { x: chunk_world_pos.x / CHUNK_SIZE as i32, y: chunk_world_pos.y / CHUNK_SIZE as i32 };
+    // Check if terrain height is not yet cached
+    let heights: [f32; CHUNK_SIZE as usize] = *heights_cache.entry(chunk_pos.x).or_insert_with(|| {
+        // If it isn't cached, we run the logic
 
+        // We need the biomes at world y0
+        let filler_biome = biome_map.get_biome(0, 0);
+        let biomes: [&Biome; CHUNK_SIZE as usize] = if chunk_world_pos.y == 0 {
+            // If chunk is at world pos y0, we use it's temperature and humidity map
+            let mut biomes = [filler_biome; CHUNK_SIZE as usize];
+            for i in 0..CHUNK_SIZE as usize {
+                biomes[i] = biome_map.get_biome(temperature_map[i as usize], humidity_map[i as usize])
+            }
+            biomes
+        } else {
+            // If chunk is not at world pos y0, we need to resample the temperature and humidity maps
+            // for the chunk at y0
+            // Get random biome points
+            let chunk_pos_y0 = IVec2 { x: chunk_pos.x, y: 0 };
+            let (temperature_points, humidity_points) = get_biome_points(&chunk_pos_y0, seed);
+
+            // Sample the noise for those points
+            let (sampled_temperature, sampled_humidity) =
+                sample_noise_at_biome_points(temperature_points, humidity_points, generic_noise, &chunk_world_pos);
+
+            // Interpolate the values from those points into a chunk-sized map
+            let (temperature_map_y0, humidity_map_y0) =
+                get_temperature_and_humidity_map(sampled_temperature, sampled_humidity);
+
+            let mut biomes = [filler_biome; CHUNK_SIZE as usize];
+            for i in 0..CHUNK_SIZE as usize {
+                biomes[i] = biome_map.get_biome(temperature_map_y0[i as usize], humidity_map_y0[i as usize])
+            }
+            biomes
+        };
+
+        let mut heights: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize]; 
+
+        for x in 0..CHUNK_SIZE {
+            let world_x = x as i32 + chunk_world_pos.x;
+            let current_biome = biomes[x as usize];
+            let current_biome_generators = &current_biome.noise_generators;
+            let current_biome_schema = &current_biome.noise_schema;
+
+            let mut height = 0.0;
+            let mut j = 0;
+
+            for (config, generator) in current_biome_schema.iter().zip(current_biome_generators.iter()) {
+                let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0) * config.amplitude;
+                height = apply_blending(height, generated_height, &config.blending_mode);
+                j += 1;
+            }
+            heights[x as usize] = height;
+        }
+
+        heights
+    });
+
+    heights
 }
 
 fn get_biome_points(position: &IVec2, seed: i32) -> ([IVec2; BIOME_SAMPLE_POINT_AMOUNT], [IVec2; BIOME_SAMPLE_POINT_AMOUNT]){
