@@ -4,7 +4,7 @@ use fastnoise_lite::FastNoiseLite;
 use fastrand::Rng;
 use glam::IVec2;
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BlendingMode}}};
 
 pub struct Chunk {
     pub foreground: BlockArray,
@@ -41,8 +41,9 @@ impl Chunk {
             let x = i % CHUNK_SIZE as usize;
             let y = i / CHUNK_SIZE as usize;
             let world_y = y as i32 + chunk_world_pos.y;
+            let current_biome = biome_map.get_biome(temperature_map[i], humidity_map[i]);
 
-            if generate_block_id(heights[x as usize], world_y as f32, i, &mut foreground) {total_block_count += 1}
+            if generate_block_id(heights[x as usize], world_y as f32, i, &mut foreground, &current_biome.biome_config) {total_block_count += 1}
         }
 
         return Chunk { 
@@ -108,13 +109,13 @@ fn convert_layer_to_aos(layer: BlockArray) -> [Block; CHUNK_BLOCK_COUNT as usize
     })
 }
 
-fn generate_block_id(height: f32, world_y: f32, i: usize, layer: &mut BlockArray) -> bool {
+fn generate_block_id(height: f32, world_y: f32, i: usize, layer: &mut BlockArray, biome_config: &BiomeConfig) -> bool {
     if height >= world_y as f32 {
         let tiles_below_surface = height as i32 - world_y as i32;
         let fg_block_id = match tiles_below_surface {
-            0 => 2,     // Grass
-            1..=5 => 1, // Dirt
-            _ => 0,     // Stone
+            0 => biome_config.surface_block,
+            1..=5 => biome_config.subsurface_block,
+            _ => biome_config.base_block,
         };
         layer.set_block_id_byindex(i, fg_block_id);
         layer.set_block_type_byindex(i, BlockType::Tile);

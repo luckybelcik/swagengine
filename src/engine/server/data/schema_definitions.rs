@@ -17,6 +17,9 @@ pub struct BiomeSchema {
 pub struct BiomeConfig {
     pub temperature: u8,
     pub humidity: u8,
+    pub surface_block: u32,
+    pub subsurface_block: u32,
+    pub base_block: u32,
 }
 
 #[derive(Deserialize)]

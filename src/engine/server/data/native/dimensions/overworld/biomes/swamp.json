@@ -1,7 +1,10 @@
 {
     "biome_config": {
-        "temperature": 25,
-        "humidity": 75
+        "temperature": 51,
+        "humidity": 51,
+        "surface_block": 2,
+        "subsurface_block": 1,
+        "base_block": 0
     },
     "noise_functions": [
         {
