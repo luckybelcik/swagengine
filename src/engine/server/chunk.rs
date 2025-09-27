@@ -36,14 +36,22 @@ impl Chunk {
         let heights: [f32; CHUNK_SIZE as usize] = get_terrain_heights(&chunk_world_pos, biome_map, &temperature_map, &humidity_map, generic_noise, heights_cache, seed);
 
         let mut total_block_count = 0;
+        let mut block_picker_rng = Rng::with_seed(get_chunk_seed(seed, position));
 
         for i in 0..CHUNK_BLOCK_COUNT as usize {
             let x = i % CHUNK_SIZE as usize;
             let y = i / CHUNK_SIZE as usize;
             let world_y = y as i32 + chunk_world_pos.y;
-            let current_biome = biome_map.get_biome(temperature_map[i], humidity_map[i]);
+            let blend_percentage = biome_map.get_blend_percentage(temperature_map[i], humidity_map[i]);
 
-            if generate_block_id(heights[x as usize], world_y as f32, i, &mut foreground, &current_biome.biome_config) {total_block_count += 1}
+            let biome_to_use = if block_picker_rng.u8(0..100) < blend_percentage {
+                biome_map.get_best_biome(temperature_map[i], humidity_map[i])
+            } else {
+                biome_map.get_second_best_biome(temperature_map[i], humidity_map[i])
+            };
+
+            if generate_block_id(heights[x as usize], world_y as f32, i, &mut foreground,
+                &biome_to_use.biome_config) {total_block_count += 1}
         }
 
         return Chunk { 
@@ -205,12 +213,12 @@ fn get_terrain_heights(chunk_world_pos: &IVec2, biome_map: &BiomeMap, temperatur
         // If it isn't cached, we run the logic
 
         // We need the biomes at world y0
-        let filler_biome = biome_map.get_biome(0, 0);
+        let filler_biome = biome_map.get_best_biome(0, 0);
         let biomes: [&Biome; CHUNK_SIZE as usize] = if chunk_world_pos.y == 0 {
             // If chunk is at world pos y0, we use it's temperature and humidity map
             let mut biomes = [filler_biome; CHUNK_SIZE as usize];
             for i in 0..CHUNK_SIZE as usize {
-                biomes[i] = biome_map.get_biome(temperature_map[i as usize], humidity_map[i as usize])
+                biomes[i] = biome_map.get_best_biome(temperature_map[i as usize], humidity_map[i as usize])
             }
             biomes
         } else {
@@ -230,7 +238,7 @@ fn get_terrain_heights(chunk_world_pos: &IVec2, biome_map: &BiomeMap, temperatur
 
             let mut biomes = [filler_biome; CHUNK_SIZE as usize];
             for i in 0..CHUNK_SIZE as usize {
-                biomes[i] = biome_map.get_biome(temperature_map_y0[i as usize], humidity_map_y0[i as usize])
+                biomes[i] = biome_map.get_best_biome(temperature_map_y0[i as usize], humidity_map_y0[i as usize])
             }
             biomes
         };
@@ -336,9 +344,9 @@ fn check_if_chunk_multibiome(biome_map: &BiomeMap, temperature_map: &[u8; CHUNK_
 -> bool
 {
     let mut chunk_is_multibiome = false;
-    let base_biome = biome_map.get_biome(temperature_map[0], humidity_map[0]);
+    let base_biome = biome_map.get_best_biome(temperature_map[0], humidity_map[0]);
     for i in 1..CHUNK_BLOCK_COUNT {
-        let biome = biome_map.get_biome(temperature_map[i as usize], humidity_map[i as usize]);
+        let biome = biome_map.get_best_biome(temperature_map[i as usize], humidity_map[i as usize]);
         if !ptr::eq(base_biome, biome) {
             chunk_is_multibiome = true;
             break;

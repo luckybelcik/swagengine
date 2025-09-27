@@ -1,7 +1,7 @@
 {
     "biome_config": {
-        "temperature": 50,
-        "humidity": 50,
+        "temperature": 75,
+        "humidity": 75,
         "surface_block": 0,
         "subsurface_block": 0,
         "base_block": 0
