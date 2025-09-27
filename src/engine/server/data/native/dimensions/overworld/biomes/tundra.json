@@ -2,6 +2,7 @@
     "biome_config": {
         "temperature": 30,
         "humidity": 50,
+        "biome_type": "Freezing",
         "surface_block": 5,
         "subsurface_block": 1,
         "base_block": 0

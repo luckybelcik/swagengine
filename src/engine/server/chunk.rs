@@ -4,7 +4,7 @@ use fastnoise_lite::FastNoiseLite;
 use fastrand::Rng;
 use glam::IVec2;
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::{BakedHeightsCache, ThreadlocalDimensionSchema}, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BiomeMapAdjustments, BlendingMode, DimensionSchema}, world::Dimension}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::{BakedHeightsCache, ThreadlocalDimensionSchema}, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BiomeMapAdjustments, BiomeTypes, BlendingMode, DimensionSchema}, world::Dimension}};
 
 pub struct Chunk {
     pub foreground: BlockArray,
@@ -129,7 +129,32 @@ fn generate_block_id(height: f32, world_y: f32, i: usize, layer: &mut BlockArray
         layer.set_block_type_byindex(i, BlockType::Tile);
         return true;
     } else if world_y <= 0.0 { // If above ground but below or at y0
-        layer.set_block_id_byindex(i, 3); // 3 = water
+        // If surface level and cold, place ice
+        if world_y == 0.0 && biome_config.biome_type == BiomeTypes::Cold {
+            layer.set_block_id_byindex(i, 6); // 6 = ice
+            layer.set_block_type_byindex(i, BlockType::Tile);
+            return true;
+        } 
+
+        // If above -5 and warm, no water
+        if world_y > -5.0 && biome_config.biome_type == BiomeTypes::Warm {
+            return false;
+        }
+
+        // Always return ice if freezing
+        if biome_config.biome_type == BiomeTypes::Freezing {
+            layer.set_block_id_byindex(i, 6); // 6 = ice
+            layer.set_block_type_byindex(i, BlockType::Tile);
+            return true;
+        }
+
+        // Never place water if hot
+        if biome_config.biome_type == BiomeTypes::Hot {
+            return false;
+        }
+
+        // Just place water if no other case fulfilled
+        layer.set_block_id_byindex(i, 3); // 3 = watar
         layer.set_block_type_byindex(i, BlockType::Tile);
         return true;
     }

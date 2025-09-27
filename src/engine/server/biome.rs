@@ -97,13 +97,6 @@ impl<'a> BiomeMap<'a> {
                 };
 
                 let index = (y * BIOME_MAP_GRID_SIZE + x) as usize;
-
-                if x == y {
-                    print!("target: {}temp {}hum || ", closest_biome.biome_config.temperature, closest_biome.biome_config.humidity);
-                    print!("second best: {}temp {}hum || ", second_closest_biome.biome_config.temperature, second_closest_biome.biome_config.humidity);
-                    print!("current: {}temp {}hum || ", x, y);
-                    println!("blend factor: {}%", blend_percentage);
-                }
             
                 biome_lookup[index] = (closest_biome, second_closest_biome, blend_percentage);
             }

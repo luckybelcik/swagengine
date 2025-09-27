@@ -2,6 +2,7 @@
     "biome_config": {
         "temperature": 80,
         "humidity": 50,
+        "biome_type": "Hot",
         "surface_block": 4,
         "subsurface_block": 4,
         "base_block": 0
@@ -16,8 +17,8 @@
             "sparse": null
         },
         {
-            "frequency": 0.01,
-            "amplitude": 8.0,
+            "frequency": 0.001,
+            "amplitude": 4.0,
             "noise_type": "Cellular",
             "fbm": null,
             "blending_mode": "Subtract",
