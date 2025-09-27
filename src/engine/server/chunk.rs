@@ -6,10 +6,6 @@ use glam::IVec2;
 
 use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::BiomeMap, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::BlendingMode}};
 
-pub struct HeapChunk {
-    pub chunk: Box<Chunk>,
-}
-
 pub struct Chunk {
     pub foreground: BlockArray,
     pub middleground: BlockArray,
@@ -23,78 +19,20 @@ pub struct Chunk {
 impl Chunk {
     pub fn generate_chunk(position: &IVec2, biome_map: &BiomeMap, heights_cache: &BakedHeightsCache, generic_noise: &Arc<FastNoiseLite>, seed: i32) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
-        let mut rng = Rng::with_seed(get_chunk_seed(seed, position));
-        let chunk_world_x = position.x * CHUNK_SIZE as i32;
-        let chunk_world_y = position.y * CHUNK_SIZE as i32;
-        let empty_ivec = IVec2 { x: 0, y: 0};
-        let mut temperature_points: [IVec2; BIOME_SAMPLE_POINT_AMOUNT] = [empty_ivec; BIOME_SAMPLE_POINT_AMOUNT];
-        let mut humidity_points: [IVec2; BIOME_SAMPLE_POINT_AMOUNT] = [empty_ivec; BIOME_SAMPLE_POINT_AMOUNT];
+        let chunk_world_pos = IVec2 { x: position.x * CHUNK_SIZE as i32, y: position.y * CHUNK_SIZE as i32 };
 
-        {
-            let mut generated_coords: HashSet<IVec2> = HashSet::new();
-            let mut i: usize = 0;
+        // Get random biome points
+        let (temperature_points, humidity_points) = get_biome_points(position, seed);
 
-            while i < BIOME_SAMPLE_POINT_AMOUNT * 2 {
-                let x = rng.i32(0..(CHUNK_SIZE as i32));
-                let y = rng.i32(0..(CHUNK_SIZE as i32));
-                    
-                let point = IVec2::new(x, y);
-                    
-                if generated_coords.insert(point) {
-                    if i < BIOME_SAMPLE_POINT_AMOUNT {
-                        temperature_points[i] = point;
-                    } else {
-                        humidity_points[i - BIOME_SAMPLE_POINT_AMOUNT] = point;
-                    }
-                }
+        // Sample the noise for those points
+        let (sampled_temperature, sampled_humidity) =
+            sample_noise_at_biome_points(temperature_points, humidity_points, generic_noise, &chunk_world_pos);
 
-                i += 1;
-            }
+        // Interpolate the values from those points into a chunk-sized map
+        let (temperature_map, humidity_map) =
+            get_temperature_and_humidity_map(sampled_temperature, sampled_humidity);
 
-        }
-
-        type Point = (IVec2, f32);
-        let empty_point: (IVec2, f32) = (empty_ivec, 0.0);
-        let mut sampled_temperature: [(IVec2, f32); _] = [empty_point; BIOME_SAMPLE_POINT_AMOUNT as usize];
-        let mut sampled_humidity: [(IVec2, f32); _] = [empty_point; BIOME_SAMPLE_POINT_AMOUNT as usize];
-
-        for i in 0..BIOME_SAMPLE_POINT_AMOUNT {
-            let temperature_point = temperature_points[i];
-            let world_x = (temperature_point.x + chunk_world_x) as f32;
-            let world_y = (temperature_point.y + chunk_world_y) as f32;
-            sampled_temperature[i] = (temperature_point, (generic_noise.get_noise_3d(world_x, world_y, 250.0) + 1.0 ) * 50.0 );
-
-            
-            let humidity_point = humidity_points[i];
-            let world_x = (humidity_point.x + chunk_world_x) as f32;
-            let world_y = (humidity_point.y + chunk_world_y) as f32;
-            sampled_humidity[i] = (humidity_point, (generic_noise.get_noise_3d(world_x, world_y, 250.0) + 1.0 ) * 50.0 );
-        }
-
-        let mut temperature: [u8; CHUNK_BLOCK_COUNT as usize] = [0; CHUNK_BLOCK_COUNT as usize];
-        let mut humidity: [u8; CHUNK_BLOCK_COUNT as usize] = [0; CHUNK_BLOCK_COUNT as usize];
-
-        for i in 0..CHUNK_BLOCK_COUNT as usize {
-            let x = i % CHUNK_SIZE as usize;
-            let y = i / CHUNK_SIZE as usize;
-            let block_pos = IVec2 { x: x as i32, y: y as i32 };
-
-            let final_temp_f32 = interpolate_idw(block_pos, &sampled_temperature);
-            let final_hum_f32 = interpolate_idw(block_pos, &sampled_humidity);
-
-            temperature[i] = final_temp_f32 as u8;
-            humidity[i] = final_hum_f32 as u8;
-        }
-
-        let mut chunk_is_multibiome = false;
-        let base_biome = biome_map.get_biome(temperature[0], humidity[0]);
-        for i in 1..CHUNK_BLOCK_COUNT {
-            let biome = biome_map.get_biome(temperature[i as usize], humidity[i as usize]);
-            if !ptr::eq(base_biome, biome) {
-                chunk_is_multibiome = true;
-                break;
-            }
-        }
+        let chunk_is_multibiome = check_if_chunk_multibiome(biome_map, &temperature_map, &humidity_map);
 
         let mut total_block_count = 0;
 
@@ -102,12 +40,13 @@ impl Chunk {
         if !chunk_is_multibiome {
             // Get entry if it exists, otherwise calculate it and insert it
             let precalculated_heights: [f32; CHUNK_SIZE as usize] = *heights_cache.entry(position.x).or_insert_with(|| {
-                let base_biome_generator = &base_biome.noise_generators;
-                let base_biome_schema = &base_biome.noise_schema;
+                let biome_of_chunk = biome_map.get_biome(temperature_map[0], humidity_map[0]);
+                let base_biome_generator = &biome_of_chunk.noise_generators;
+                let base_biome_schema = &biome_of_chunk.noise_schema;
                 let mut heights: [f32; CHUNK_SIZE as usize] = [0.0; CHUNK_SIZE as usize]; 
 
                 for x in 0..CHUNK_SIZE {
-                    let world_x = x as i32 + chunk_world_x;
+                    let world_x = x as i32 + chunk_world_pos.x;
 
                     let mut height = 0.0;
                     let mut j = 0;
@@ -127,17 +66,18 @@ impl Chunk {
             for i in 0..CHUNK_BLOCK_COUNT as usize {
                 let x = i % CHUNK_SIZE as usize;
                 let y = i / CHUNK_SIZE as usize;
-                let world_y = y as i32 + chunk_world_y;
+                let world_y = y as i32 + chunk_world_pos.y;
 
                 if generate_block_id(precalculated_heights[x as usize], world_y as f32, i, &mut foreground) {total_block_count += 1}
             }
+        // If chunk has more than one biome, sample biome for every block and then generate the height
         } else {
             for i in 0..CHUNK_BLOCK_COUNT as usize {
                 let x = i % CHUNK_SIZE as usize;
                 let y = i / CHUNK_SIZE as usize;
-                let world_x = x as i32 + chunk_world_x;
-                let world_y = y as i32 + chunk_world_y;
-                let biome = biome_map.get_biome(temperature[x], humidity[x]);
+                let world_x = x as i32 + chunk_world_pos.x;
+                let world_y = y as i32 + chunk_world_pos.y;
+                let biome = biome_map.get_biome(temperature_map[x], humidity_map[x]);
 
                 let mut height = 0.0;
                 let mut j = 0;
@@ -186,20 +126,6 @@ impl Chunk {
             },
             LayerType::Background => {
                 return &mut self.background; 
-            },
-        }
-    }
-
-    fn get_block_array_immut(&self, layer: LayerType) -> &BlockArray {
-        match layer {
-            LayerType::Foreground => {
-                return &self.foreground;
-            },
-            LayerType::Middleground => {
-                return &self.middleground;
-            },
-            LayerType::Background => {
-                return &self.background; 
             },
         }
     }
@@ -313,4 +239,98 @@ fn interpolate_idw(
     } else {
         sampled_points.first().map(|(_, v)| *v).unwrap_or(0.0) 
     }
+}
+
+// We only sample the 1D height noise at the y coordinate 0 to avoid weird artifacts
+// If u wanna know why, DM me and I will explain
+fn get_terrain_height(x: i32, biome_map: &BiomeMap, generic_noise: &Arc<FastNoiseLite>, seed: i32) {
+
+}
+
+fn get_biome_points(position: &IVec2, seed: i32) -> ([IVec2; BIOME_SAMPLE_POINT_AMOUNT], [IVec2; BIOME_SAMPLE_POINT_AMOUNT]){
+    let empty_ivec = IVec2 { x: 0, y: 0};
+    let mut temperature_points: [IVec2; BIOME_SAMPLE_POINT_AMOUNT] = [empty_ivec; BIOME_SAMPLE_POINT_AMOUNT];
+    let mut humidity_points: [IVec2; BIOME_SAMPLE_POINT_AMOUNT] = [empty_ivec; BIOME_SAMPLE_POINT_AMOUNT];
+    let mut rng = Rng::with_seed(get_chunk_seed(seed, position));
+    let mut generated_coords: HashSet<IVec2> = HashSet::new();
+    let mut i: usize = 0;   
+
+    while i < BIOME_SAMPLE_POINT_AMOUNT * 2 {
+        let x = rng.i32(0..(CHUNK_SIZE as i32));
+        let y = rng.i32(0..(CHUNK_SIZE as i32));
+
+        let point = IVec2::new(x, y);
+
+        if generated_coords.insert(point) {
+            if i < BIOME_SAMPLE_POINT_AMOUNT {
+                temperature_points[i] = point;
+            } else {
+                humidity_points[i - BIOME_SAMPLE_POINT_AMOUNT] = point;
+            }
+        }
+
+        i += 1;
+    }
+
+    (temperature_points, humidity_points)
+}
+
+fn sample_noise_at_biome_points(temperature_points: [IVec2; BIOME_SAMPLE_POINT_AMOUNT], humidity_points: [IVec2; BIOME_SAMPLE_POINT_AMOUNT], generic_noise: &Arc<FastNoiseLite>, chunk_world_pos: &IVec2)
+->  ([(IVec2, f32); BIOME_SAMPLE_POINT_AMOUNT], [(IVec2, f32); BIOME_SAMPLE_POINT_AMOUNT])
+{
+    let empty_point: (IVec2, f32) = (IVec2 {x: 0, y:0}, 0.0);
+    let mut sampled_temperature: [(IVec2, f32); _] = [empty_point; BIOME_SAMPLE_POINT_AMOUNT];
+    let mut sampled_humidity: [(IVec2, f32); _] = [empty_point; BIOME_SAMPLE_POINT_AMOUNT];
+
+    for i in 0..BIOME_SAMPLE_POINT_AMOUNT {
+        let temperature_point = temperature_points[i];
+        let world_x = (temperature_point.x + chunk_world_pos.x) as f32;
+        let world_y = (temperature_point.y + chunk_world_pos.y) as f32;
+        sampled_temperature[i] = (temperature_point, (generic_noise.get_noise_3d(world_x, world_y, 250.0) + 1.0 ) * 50.0 );
+
+        
+        let humidity_point = humidity_points[i];
+        let world_x = (humidity_point.x + chunk_world_pos.x) as f32;
+        let world_y = (humidity_point.y + chunk_world_pos.y) as f32;
+        sampled_humidity[i] = (humidity_point, (generic_noise.get_noise_3d(world_x, world_y, 250.0) + 1.0 ) * 50.0 );
+    }
+
+    (sampled_temperature, sampled_humidity)
+}
+
+fn get_temperature_and_humidity_map(sampled_temperature: [(IVec2, f32); BIOME_SAMPLE_POINT_AMOUNT], sampled_humidity: [(IVec2, f32); BIOME_SAMPLE_POINT_AMOUNT])
+-> ([u8; CHUNK_BLOCK_COUNT as usize], [u8; CHUNK_BLOCK_COUNT as usize])
+{
+    let mut temperature: [u8; CHUNK_BLOCK_COUNT as usize] = [0; CHUNK_BLOCK_COUNT as usize];
+    let mut humidity: [u8; CHUNK_BLOCK_COUNT as usize] = [0; CHUNK_BLOCK_COUNT as usize];
+
+    for i in 0..CHUNK_BLOCK_COUNT as usize {
+        let x = i % CHUNK_SIZE as usize;
+        let y = i / CHUNK_SIZE as usize;
+        let block_pos = IVec2 { x: x as i32, y: y as i32 };
+
+        let final_temp_f32 = interpolate_idw(block_pos, &sampled_temperature);
+        let final_hum_f32 = interpolate_idw(block_pos, &sampled_humidity);
+
+        temperature[i] = final_temp_f32 as u8;
+        humidity[i] = final_hum_f32 as u8;
+    }
+
+    (temperature, humidity)
+}
+
+fn check_if_chunk_multibiome(biome_map: &BiomeMap, temperature_map: &[u8; CHUNK_BLOCK_COUNT as usize], humidity_map: &[u8; CHUNK_BLOCK_COUNT as usize])
+-> bool
+{
+    let mut chunk_is_multibiome = false;
+    let base_biome = biome_map.get_biome(temperature_map[0], humidity_map[0]);
+    for i in 1..CHUNK_BLOCK_COUNT {
+        let biome = biome_map.get_biome(temperature_map[i as usize], humidity_map[i as usize]);
+        if !ptr::eq(base_biome, biome) {
+            chunk_is_multibiome = true;
+            break;
+        }
+    }
+
+    chunk_is_multibiome
 }
