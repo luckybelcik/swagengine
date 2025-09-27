@@ -378,6 +378,9 @@ fn get_temperature_and_humidity_map(chunk_world_pos: &IVec2, sampled_temperature
         let final_temp_f32 = interpolate_idw(block_pos, &sampled_temperature);
         let final_hum_f32 = interpolate_idw(block_pos, &sampled_humidity);
 
+        // Remap to 35-65
+        let final_temp_f32 = ((final_temp_f32 - 50.0) * 0.3) + 50.0;
+
         temperature[i] = (final_temp_f32 + total_bias).clamp(0.0, 100.0).round() as u8;
         humidity[i] = final_hum_f32 as u8;
     }

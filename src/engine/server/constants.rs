@@ -8,7 +8,6 @@ pub const CHUNK_BLOCK_COUNT: u16 = CHUNK_SIZE as u16 * CHUNK_SIZE as u16;
 pub const BIOME_SAMPLE_POINT_AMOUNT: usize = CHUNK_SIZE as usize / 8;
 pub const BIOME_MAP_GRID_SIZE: usize = 100;
 pub const BIOME_TRANSITION_THRESHOLD: f64 = 10.0;
-pub const MAX_BIOME_BLEND_DISTANCE: f64 = 5.0;
-pub const BIOME_IDW_POWER: f64 = 5.0;
+pub const BIOME_IDW_POWER: f64 = 12.0;
 
 pub const TICK_RATE: u64 = 60;

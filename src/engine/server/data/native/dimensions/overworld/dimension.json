@@ -2,7 +2,7 @@
     "name": "overworld",
     "size": [100, 100],
     "biome_map_adjustments": {
-        "horizontal_temperature_variation": 50,
+        "horizontal_temperature_variation": 70,
         "vertical_temperature_variation": 10
     }
 }

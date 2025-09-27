@@ -1,6 +1,6 @@
 use fastnoise_lite::{FastNoiseLite, NoiseType};
 
-use crate::engine::server::{constants::{BIOME_IDW_POWER, BIOME_MAP_GRID_SIZE, BIOME_TRANSITION_THRESHOLD, MAX_BIOME_BLEND_DISTANCE}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig, NoiseTypes}};
+use crate::engine::server::{constants::{BIOME_IDW_POWER, BIOME_MAP_GRID_SIZE, BIOME_TRANSITION_THRESHOLD}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig, NoiseTypes}};
 
 pub struct BiomeRegistry {
     pub biomes: Box<[Biome]>,
