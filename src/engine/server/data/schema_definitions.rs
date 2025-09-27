@@ -1,10 +1,17 @@
 use glam::UVec2;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DimensionSchema {
     pub name: String,
     pub size: UVec2,
+    pub biome_map_adjustments: Option<BiomeMapAdjustments>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct BiomeMapAdjustments {
+    pub horizontal_temperature_variation: u8,
+    pub vertical_temperature_variation: u8,
 }
 
 #[derive(Deserialize)]

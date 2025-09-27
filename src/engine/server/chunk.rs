@@ -1,10 +1,10 @@
-use std::{collections::HashSet, ptr, sync::Arc};
+use std::{collections::HashSet, ptr, sync::{Arc, RwLock}};
 
 use fastnoise_lite::FastNoiseLite;
 use fastrand::Rng;
 use glam::IVec2;
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BlendingMode}}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::{BakedHeightsCache, ThreadlocalDimensionSchema}, common::{BlockArray, BlockType, LayerType}, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BiomeMapAdjustments, BlendingMode, DimensionSchema}, world::Dimension}};
 
 pub struct Chunk {
     pub foreground: BlockArray,
@@ -17,7 +17,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn generate_chunk(position: &IVec2, biome_map: &BiomeMap, heights_cache: &BakedHeightsCache, generic_noise: &Arc<FastNoiseLite>, seed: i32) -> Chunk {
+    pub fn generate_chunk(position: &IVec2, biome_map: &BiomeMap, dimension_schema: &ThreadlocalDimensionSchema, heights_cache: &BakedHeightsCache, generic_noise: &Arc<FastNoiseLite>, seed: i32) -> Chunk {
         let mut foreground = BlockArray::filled_basic_air();
         let chunk_world_pos = IVec2 { x: position.x * CHUNK_SIZE as i32, y: position.y * CHUNK_SIZE as i32 };
 
@@ -30,10 +30,10 @@ impl Chunk {
 
         // Interpolate the values from those points into a chunk-sized map
         let (temperature_map, humidity_map) =
-            get_temperature_and_humidity_map(sampled_temperature, sampled_humidity);
+            get_temperature_and_humidity_map(&chunk_world_pos, sampled_temperature, sampled_humidity, dimension_schema);
 
         // Get terrain height
-        let heights: [f32; CHUNK_SIZE as usize] = get_terrain_heights(&chunk_world_pos, biome_map, &temperature_map, &humidity_map, generic_noise, heights_cache, seed);
+        let heights: [f32; CHUNK_SIZE as usize] = get_terrain_heights(&chunk_world_pos, biome_map, &temperature_map, &humidity_map, generic_noise, dimension_schema, heights_cache, seed);
 
         let mut total_block_count = 0;
         let mut block_picker_rng = Rng::with_seed(get_chunk_seed(seed, position));
@@ -205,7 +205,7 @@ fn interpolate_idw(
 
 // We only sample the 1D height noise at the y coordinate 0 to avoid weird artifacts
 // If u wanna know why, DM me and I will explain
-fn get_terrain_heights(chunk_world_pos: &IVec2, biome_map: &BiomeMap, temperature_map: &[u8; CHUNK_BLOCK_COUNT as usize], humidity_map: &[u8; CHUNK_BLOCK_COUNT as usize], generic_noise: &Arc<FastNoiseLite>, heights_cache: &BakedHeightsCache, seed: i32)
+fn get_terrain_heights(chunk_world_pos: &IVec2, biome_map: &BiomeMap, temperature_map: &[u8; CHUNK_BLOCK_COUNT as usize], humidity_map: &[u8; CHUNK_BLOCK_COUNT as usize], generic_noise: &Arc<FastNoiseLite>, dimension_schema: &ThreadlocalDimensionSchema, heights_cache: &BakedHeightsCache, seed: i32)
 -> [f32; CHUNK_SIZE as usize] {
     let chunk_pos = IVec2 { x: chunk_world_pos.x / CHUNK_SIZE as i32, y: chunk_world_pos.y / CHUNK_SIZE as i32 };
     // Check if terrain height is not yet cached
@@ -234,7 +234,7 @@ fn get_terrain_heights(chunk_world_pos: &IVec2, biome_map: &BiomeMap, temperatur
 
             // Interpolate the values from those points into a chunk-sized map
             let (temperature_map_y0, humidity_map_y0) =
-                get_temperature_and_humidity_map(sampled_temperature, sampled_humidity);
+                get_temperature_and_humidity_map(&chunk_pos_y0, sampled_temperature, sampled_humidity, dimension_schema);
 
             let mut biomes = [filler_biome; CHUNK_SIZE as usize];
             for i in 0..CHUNK_SIZE as usize {
@@ -319,21 +319,66 @@ fn sample_noise_at_biome_points(temperature_points: [IVec2; BIOME_SAMPLE_POINT_A
     (sampled_temperature, sampled_humidity)
 }
 
-fn get_temperature_and_humidity_map(sampled_temperature: [(IVec2, f32); BIOME_SAMPLE_POINT_AMOUNT], sampled_humidity: [(IVec2, f32); BIOME_SAMPLE_POINT_AMOUNT])
+fn get_temperature_and_humidity_map(chunk_world_pos: &IVec2, sampled_temperature: [(IVec2, f32); BIOME_SAMPLE_POINT_AMOUNT], sampled_humidity: [(IVec2, f32); BIOME_SAMPLE_POINT_AMOUNT], dimension_schema: &ThreadlocalDimensionSchema)
 -> ([u8; CHUNK_BLOCK_COUNT as usize], [u8; CHUNK_BLOCK_COUNT as usize])
 {
     let mut temperature: [u8; CHUNK_BLOCK_COUNT as usize] = [0; CHUNK_BLOCK_COUNT as usize];
     let mut humidity: [u8; CHUNK_BLOCK_COUNT as usize] = [0; CHUNK_BLOCK_COUNT as usize];
+    let full_world_size_x = (&dimension_schema.size.x * CHUNK_SIZE as u32) as f32;
+    let full_world_size_y = (&dimension_schema.size.y * CHUNK_SIZE as u32) as f32;
+
+    let (horiz_var, vert_var) = if let Some(adjustments) = &dimension_schema.biome_map_adjustments {
+        (adjustments.horizontal_temperature_variation as f32, 
+         adjustments.vertical_temperature_variation as f32)
+    } else {
+        (0.0, 0.0)
+    };
+
 
     for i in 0..CHUNK_BLOCK_COUNT as usize {
         let x = i % CHUNK_SIZE as usize;
         let y = i / CHUNK_SIZE as usize;
+
+        let world_x = x as f32 + chunk_world_pos.x as f32;
+        let world_y = y as f32 + chunk_world_pos.y as f32;
+
+        let half_world_size_x = full_world_size_x / 2.0;
+        let half_world_size_y = full_world_size_y / 2.0;
+
+        let relative_x = (world_x + half_world_size_x) / full_world_size_x;
+
+        let horizontal_bias: f32 = if full_world_size_x > 0.0 {
+            if relative_x < 1.0 / 3.0 {
+                // Left third: Colder
+                let bias_factor = 1.0 - (relative_x * 3.0); 
+                bias_factor * horiz_var
+            } else if relative_x >= 2.0 / 3.0 {
+                // Right third: Warmer
+                let bias_factor = (relative_x * 3.0) - 2.0; 
+                -bias_factor * horiz_var
+            } else {
+                // Middle third: Neutral
+                0.0
+            }
+        } else { 0.0 };
+
+        let vertical_bias: f32 = if full_world_size_y > 0.0 && world_y > 10.0 {
+            // Higher = colder
+            let bias_factor = world_y / half_world_size_y;
+            
+            -bias_factor * vert_var
+        } else {
+            0.0
+        };
+
+        let total_bias = horizontal_bias + vertical_bias;
+
         let block_pos = IVec2 { x: x as i32, y: y as i32 };
 
         let final_temp_f32 = interpolate_idw(block_pos, &sampled_temperature);
         let final_hum_f32 = interpolate_idw(block_pos, &sampled_humidity);
 
-        temperature[i] = final_temp_f32 as u8;
+        temperature[i] = (final_temp_f32 + total_bias).clamp(0.0, 100.0).round() as u8;
         humidity[i] = final_hum_f32 as u8;
     }
 

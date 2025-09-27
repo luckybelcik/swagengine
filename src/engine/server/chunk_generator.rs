@@ -6,9 +6,10 @@ use glam::IVec2;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 
-use crate::engine::server::{biome::BiomeRegistry, chunk::Chunk, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}};
+use crate::engine::server::{biome::BiomeRegistry, chunk::Chunk, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::DimensionSchema, world::Dimension};
 
 pub type BakedHeightsCache = Arc<DashMap<i32, [f32; CHUNK_SIZE as usize]>>;
+pub type ThreadlocalDimensionSchema = Arc<DimensionSchema>;
 
 pub struct ChunkGenerator {
     chunks_awaiting_generation: HashSet<IVec2>,
@@ -16,7 +17,7 @@ pub struct ChunkGenerator {
 }
 
 impl ChunkGenerator {
-    pub fn new(biome_registry: BiomeRegistry, world_seed: i32) -> (ChunkGenerator, Receiver<(Chunk, IVec2)>) {
+    pub fn new(biome_registry: BiomeRegistry, dimension_schema: DimensionSchema, world_seed: i32) -> (ChunkGenerator, Receiver<(Chunk, IVec2)>) {
         let (generator_sender, generator_listener) = std::sync::mpsc::channel::<(Chunk, IVec2)>();
         let (chunkpos_sender, chunkpos_listener) = std::sync::mpsc::channel::<Generate>();
 
@@ -25,6 +26,9 @@ impl ChunkGenerator {
 
         let arc_heights_cache = Arc::new(DashMap::<i32, [f32; CHUNK_SIZE as usize]>::new());
         let thread_heights_cache = arc_heights_cache.clone();
+
+        let arc_dimension = Arc::new(dimension_schema);
+        let thread_dimension = arc_dimension.clone();
 
         let mut noise = FastNoiseLite::with_seed(world_seed * -1);
         noise.set_frequency(Some(0.0001));
@@ -59,13 +63,13 @@ impl ChunkGenerator {
                                 .map(|&coords| {
                                     let registry_guard = thread_registry.read().unwrap();
                                     let biome_map = &registry_guard.biome_map; 
-                                    (coords, Chunk::generate_chunk(&coords, biome_map, &thread_heights_cache, &thread_generic_noise, world_seed))
+                                    (coords, Chunk::generate_chunk(&coords, biome_map, &thread_dimension, &thread_heights_cache, &thread_generic_noise, world_seed))
                                 }).collect()
                         } else {
                             println!("Processing small batch of {} chunks sequentially.", batch_size);
                             let registry_guard = thread_registry.read().unwrap();
                             let biome_map = &registry_guard.biome_map; 
-                            batch.into_iter().map(|coords| (coords, Chunk::generate_chunk(&coords, &biome_map, &thread_heights_cache, &thread_generic_noise, world_seed))).collect()
+                            batch.into_iter().map(|coords| (coords, Chunk::generate_chunk(&coords, &biome_map, &thread_dimension, &thread_heights_cache, &thread_generic_noise, world_seed))).collect()
                         };
 
                         for (pos, chunk) in generated_chunks {
@@ -81,7 +85,7 @@ impl ChunkGenerator {
                         let biome_map = &registry_guard.biome_map; 
 
                         while chunks_generated < chunk_limit {
-                            let _: Chunk = Chunk::generate_chunk(&chunk_pos, &biome_map, &thread_heights_cache, &thread_generic_noise, world_seed); 
+                            let _: Chunk = Chunk::generate_chunk(&chunk_pos, &biome_map, &thread_dimension, &thread_heights_cache, &thread_generic_noise, world_seed); 
                             chunks_generated += 1;
 
                             chunk_pos.x += 1;

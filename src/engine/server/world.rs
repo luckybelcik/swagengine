@@ -3,11 +3,12 @@ use dashmap::DashMap;
 use glam::{IVec2, UVec2};
 use hecs::World;
 
-use crate::engine::{common::get_data_path, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{biome::BiomeRegistry, chunk::Chunk, chunk_generator::ChunkGenerator, data::schema_definitions::{BiomeSchema, DimensionSchema}}};
+use crate::engine::{common::get_data_path, components::alive::{AliveTask, AliveTaskKey, EntityID, PlayerID}, server::{biome::BiomeRegistry, chunk::Chunk, chunk_generator::ChunkGenerator, data::schema_definitions::{BiomeMapAdjustments, BiomeSchema, DimensionSchema}}};
 
 pub struct Dimension {
     pub name: String,
     pub size: UVec2,
+    pub dimension_schema: DimensionSchema,
     ecs_world: hecs::World,
     chunks: HashMap<IVec2, Chunk>,
     chunk_generator: ChunkGenerator,
@@ -29,11 +30,12 @@ impl Dimension {
 
         let biome_schemas = biomes_result.unwrap();
         let biome_registry = BiomeRegistry::new(biome_schemas, seed);
-        let (chunk_generator, chunk_receiver) = ChunkGenerator::new(biome_registry, seed);
+        let (chunk_generator, chunk_receiver) = ChunkGenerator::new(biome_registry, schema.clone(), seed);
 
         Dimension { 
             name: schema.name.clone(),
             size: schema.size,
+            dimension_schema: schema.clone(),
             ecs_world: World::new(),
             chunks: HashMap::new(),
             chunk_generator,
@@ -46,8 +48,8 @@ impl Dimension {
     }
 
     pub fn load_chunks(&mut self) {
-        let generated_height = 20;
-        let generated_width = 20;
+        let generated_height = 8;
+        let generated_width = 150;
 
         let half_height = generated_height / 2;
         let half_width = generated_width / 2;
@@ -80,9 +82,9 @@ impl Dimension {
 
     fn try_load_chunk(&mut self, chunk_pos: IVec2) {
         if !self.chunk_within_world_bounds(&chunk_pos) {
-            println!("Chunk out of bounds {:?}", &chunk_pos)
+            // chunk out of bounds
         } else if self.chunk_at(&chunk_pos) {
-            // println!("Chunk already exists at {:?}", &chunk_pos)
+            // chunk already exists
         } else {
             self.chunk_generator.load_chunk(&chunk_pos);
         }

@@ -74,6 +74,8 @@ fn fs_main(
         case 1u: { color = vec3(0.32, 0.24, 0.13); } // Dirt
         case 2u: { color = vec3(0.30, 0.62, 0.13); } // Grass
         case 3u: { color = vec3(0.30, 0.42, 0.75); } // Water
+        case 4u: { color = vec3(0.89, 0.82, 0.34); } // Sand
+        case 5u: { color = vec3(0.88, 0.91, 0.94); } // Snow
         default: { color = vec3(0.00, 0.00, 0.00); } // None
     }
 
