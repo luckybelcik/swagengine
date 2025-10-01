@@ -7,3 +7,4 @@ pub mod constants;
 pub mod commands;
 pub mod data;
 pub mod biome;
+pub mod noise;
