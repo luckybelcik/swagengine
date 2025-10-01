@@ -1,7 +1,7 @@
 use bincode::{Encode, Decode};
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{common::ChunkRelativePos, server::{constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig, NoiseTypes}}};
+use crate::engine::{common::ChunkRelativePos, server::{constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, Encode, Decode)]
 pub enum BlockType {

@@ -17,7 +17,7 @@ pub struct BiomeMapAdjustments {
 #[derive(Deserialize)]
 pub struct BiomeSchema {
     pub biome_config: BiomeConfig,
-    pub noise_functions: Vec<NoiseConfig>,
+    pub noise_functions: NoiseFunctions,
 }
 
 #[derive(Deserialize)]
@@ -40,34 +40,20 @@ pub enum BiomeTypes {
 }
 
 #[derive(Deserialize)]
+pub struct NoiseFunctions {
+    pub continental: NoiseConfig,
+    pub mountainous: NoiseConfig,
+    pub hilly: NoiseConfig,
+    pub texture: NoiseConfig,
+    pub cellular: NoiseConfig,
+    pub gridlike: NoiseConfig,
+}
+
+#[derive(Deserialize)]
 pub struct NoiseConfig {
-    pub frequency: f32,
     pub amplitude: f32,
-    pub noise_type: NoiseTypes,
-    pub fbm: Option<FbmConfig>,
+    pub weight: f32,
     pub blending_mode: BlendingMode,
-    pub sparse: Option<SparseConfig>,
-}
-
-#[derive(Deserialize)]
-pub enum NoiseTypes {
-    Cellular,
-    OpenSimplex2,
-    Perlin,
-    Value,
-    ValueCubic,
-}
-
-#[derive(Deserialize)]
-pub struct FbmConfig {
-    pub octaves: u32,
-    pub gain: f32,
-    pub lacunarity: f32,
-}
-
-#[derive(Deserialize)]
-pub struct SparseConfig {
-    pub sparse_factor: u8,
 }
 
 #[derive(Deserialize)]
