@@ -1,5 +1,4 @@
 use bincode::{Encode, Decode};
-use noise_functions::{modifiers::{Fbm, Frequency, Seeded}, CellDistance, CellDistanceSq, CellValue, Noise, OpenSimplex2, Perlin, Simplex, Value, ValueCubic};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{common::ChunkRelativePos, server::{constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig, NoiseTypes}}};
@@ -95,20 +94,4 @@ pub enum LayerType {
     Foreground,
     Middleground,
     Background
-}
-
-pub struct BasicNoiseGenerators {
-    pub base: Fbm<Frequency<Seeded<OpenSimplex2>, noise_functions::Constant>>,
-    pub continental_main: Frequency<Seeded<OpenSimplex2>, noise_functions::Constant>,
-    pub continental_detail: Frequency<Seeded<OpenSimplex2>, noise_functions::Constant>,
-}
-
-impl BasicNoiseGenerators {
-    pub fn new(seed: i32) -> BasicNoiseGenerators {
-        BasicNoiseGenerators {
-            base: OpenSimplex2.seed(seed).frequency(0.025).fbm(3, 0.62, 1.89),
-            continental_main: OpenSimplex2.seed(seed).frequency(0.00025),
-            continental_detail: OpenSimplex2.seed(seed).frequency(0.00250),
-        }
-    }
 }

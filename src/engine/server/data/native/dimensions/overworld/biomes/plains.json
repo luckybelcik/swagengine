@@ -1,0 +1,28 @@
+{
+    "biome_config": {
+        "temperature": 50,
+        "humidity": 50,
+        "biome_type": "Neutral",
+        "surface_block": 2,
+        "subsurface_block": 1,
+        "base_block": 0
+    },
+    "noise_functions": [
+        {
+            "frequency": 0.0001,
+            "amplitude": 20.0,
+            "noise_type": "OpenSimplex2",
+            "fbm": null,
+            "blending_mode": "Mix",
+            "sparse": null
+        },
+        {
+            "frequency": 0.003,
+            "amplitude": 5.0,
+            "noise_type": "OpenSimplex2",
+            "fbm": null,
+            "blending_mode": "Mix",
+            "sparse": null
+        }
+    ]
+}
