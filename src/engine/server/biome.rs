@@ -1,6 +1,4 @@
-use fastnoise_lite::{FastNoiseLite, NoiseType};
-
-use crate::engine::server::{constants::{BIOME_IDW_POWER, BIOME_MAP_GRID_SIZE, BIOME_TRANSITION_THRESHOLD}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig}};
+use crate::engine::server::{constants::{BIOME_IDW_POWER, BIOME_MAP_GRID_SIZE, BIOME_TRANSITION_THRESHOLD, CELLULAR_NINDEX, CONTINENTAL_NINDEX, GRIDLIKE_NINDEX, HILLY_NINDEX, MOUNTAINOUS_NINDEX, NUM_NOISE_LAYERS, TEXTURE_NINDEX}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig}};
 
 pub struct BiomeRegistry {
     pub biomes: Box<[Biome]>,
@@ -8,9 +6,9 @@ pub struct BiomeRegistry {
 }
 
 impl BiomeRegistry {
-    pub fn new(biome_schemas: Vec<BiomeSchema>, seed: i32) -> Self {
+    pub fn new(biome_schemas: Vec<BiomeSchema>) -> Self {
         let biomes_vec: Vec<Biome> = biome_schemas.into_iter()
-            .map(|s| Biome::from_schema(s, seed))
+            .map(|schema| Biome::from_schema(schema))
             .collect();
 
         let biomes_box = biomes_vec.into_boxed_slice();
@@ -135,41 +133,23 @@ impl<'a> BiomeMap<'a> {
 
 pub struct Biome {
     pub biome_config: BiomeConfig,
-    pub noise_schema: Vec<NoiseConfig>,
-    pub noise_generators: Vec<FastNoiseLite>,
+    pub noise_schema: [NoiseConfig; 6],
 }
 
 impl Biome {
-    pub fn from_schema(schema: BiomeSchema, seed: i32) -> Self {
-        let mut generators: Vec<FastNoiseLite> = Vec::new(); 
-        for noise_fn in &schema.noise_functions {
-            let mut generator = FastNoiseLite::new();
-            match noise_fn.noise_type {
-                NoiseTypes::Cellular => generator.set_noise_type(Some(NoiseType::Cellular)),
-                NoiseTypes::OpenSimplex2 => generator.set_noise_type(Some(NoiseType::OpenSimplex2)),
-                NoiseTypes::Perlin => generator.set_noise_type(Some(NoiseType::Perlin)),
-                NoiseTypes::Value => generator.set_noise_type(Some(NoiseType::Value)),
-                NoiseTypes::ValueCubic => generator.set_noise_type(Some(NoiseType::ValueCubic)),
-            };
+    pub fn from_schema(schema: BiomeSchema) -> Self {
+        let empty_config = NoiseConfig { amplitude: 0.0, weight: 0.0, blending_mode: super::data::schema_definitions::BlendingMode::Add };
+        let mut noise_schema: [NoiseConfig; NUM_NOISE_LAYERS] = [empty_config; NUM_NOISE_LAYERS];
+        noise_schema[CONTINENTAL_NINDEX] = schema.noise_functions.continental;
+        noise_schema[MOUNTAINOUS_NINDEX] = schema.noise_functions.mountainous;
+        noise_schema[HILLY_NINDEX] = schema.noise_functions.hilly;
+        noise_schema[TEXTURE_NINDEX] = schema.noise_functions.texture;
+        noise_schema[CELLULAR_NINDEX] = schema.noise_functions.cellular;
+        noise_schema[GRIDLIKE_NINDEX] = schema.noise_functions.gridlike;
 
-            generator.set_seed(Some(seed));
-            generator.set_frequency(Some(noise_fn.frequency));
-           
-            match &noise_fn.fbm {
-                Some(config) => {
-                    generator.set_fractal_octaves(Some(config.octaves as i32));
-                    generator.set_fractal_gain(Some(config.gain));
-                    generator.set_fractal_lacunarity(Some(config.lacunarity));
-                },
-                _ => (),
-            };
-
-            generators.push(generator);
-        }
         Biome {
             biome_config: schema.biome_config,
-            noise_schema: schema.noise_functions,
-            noise_generators: generators,
+            noise_schema: noise_schema,
         }
     }
 }

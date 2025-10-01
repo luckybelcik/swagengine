@@ -49,14 +49,14 @@ pub struct NoiseFunctions {
     pub gridlike: NoiseConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy)]
 pub struct NoiseConfig {
     pub amplitude: f32,
     pub weight: f32,
     pub blending_mode: BlendingMode,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy)]
 pub enum BlendingMode {
     Mix,
     MixPositive,

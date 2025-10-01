@@ -29,7 +29,7 @@ impl Dimension {
         }
 
         let biome_schemas = biomes_result.unwrap();
-        let biome_registry = BiomeRegistry::new(biome_schemas, seed);
+        let biome_registry = BiomeRegistry::new(biome_schemas);
         let (chunk_generator, chunk_receiver) = ChunkGenerator::new(biome_registry, schema.clone(), seed);
 
         Dimension { 

@@ -10,4 +10,13 @@ pub const BIOME_MAP_GRID_SIZE: usize = 100;
 pub const BIOME_TRANSITION_THRESHOLD: f64 = 10.0;
 pub const BIOME_IDW_POWER: f64 = 12.0;
 
+pub const CONTINENTAL_NINDEX: usize = 0;
+pub const MOUNTAINOUS_NINDEX: usize = 1;
+pub const HILLY_NINDEX: usize = 2;
+pub const TEXTURE_NINDEX: usize = 3;
+pub const CELLULAR_NINDEX: usize = 4;
+pub const GRIDLIKE_NINDEX: usize = 5;
+//
+pub const NUM_NOISE_LAYERS: usize = 6;
+
 pub const TICK_RATE: u64 = 60;

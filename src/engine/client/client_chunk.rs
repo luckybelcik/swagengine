@@ -1,6 +1,6 @@
 use glam::IVec2;
 
-use crate::engine::{client::state::State, common::{Block, ChunkMesh}, server::constants::CHUNK_SIZE};
+use crate::engine::{common::{Block, ChunkMesh}, server::constants::CHUNK_SIZE};
 use wgpu::{util::DeviceExt, RenderPass};
 
 pub struct ClientChunk {
