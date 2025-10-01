@@ -1,4 +1,8 @@
-use crate::engine::server::noise::cpu_noise::{self, CPUNoise};
+use std::sync::Arc;
+
+use glam::IVec2;
+
+use crate::engine::server::{constants::CHUNK_BLOCK_COUNT, data::schema_definitions::DimensionSchema, noise::cpu_noise::CPUNoise};
 
 #[cfg(feature = "gpu-server")]
 use crate::engine::server::noise::{gpu_noise::GPUNoise};
@@ -15,11 +19,11 @@ pub struct NoiseSampler {
 }
 
 impl NoiseSampler {
-    pub async fn new() -> NoiseSampler {
+    pub async fn new(dimension_seed: i32) -> NoiseSampler {
         #[cfg(feature = "gpu-server")]
         let gpu_noise = GPUNoise::new().await;
 
-        let cpu_noise = CPUNoise::new();
+        let cpu_noise = CPUNoise::new(dimension_seed);
 
         #[cfg(feature = "gpu-server")]
         return NoiseSampler {
@@ -31,5 +35,10 @@ impl NoiseSampler {
         return NoiseSampler {
             cpu_noise,
         };
+    }
+
+    pub fn get_temperature_and_humidity_map(&self, chunk_pos: &IVec2, world_seed: i32, dimension_schema: &Arc<DimensionSchema>)
+    -> ([u8; CHUNK_BLOCK_COUNT as usize], [u8; CHUNK_BLOCK_COUNT as usize]) {
+        self.cpu_noise.get_temperature_and_humidity_map(chunk_pos, world_seed, dimension_schema)
     }
 }
