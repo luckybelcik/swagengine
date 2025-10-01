@@ -273,7 +273,6 @@ fn get_terrain_heights(chunk_world_pos: &IVec2, biome_map: &BiomeMap, temperatur
         for x in 0..CHUNK_SIZE {
             let world_x = x as i32 + chunk_world_pos.x;
             let current_biome = biomes[x as usize];
-            let current_biome_generators = &current_biome.noise_generators;
             let current_biome_schema = &current_biome.noise_schema;
 
             let mut height = 0.0;
