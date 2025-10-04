@@ -4,7 +4,7 @@ use fastnoise_lite::{CellularReturnType, FastNoiseLite, FractalType, NoiseType};
 use fastrand::Rng;
 use glam::IVec2;
 
-use crate::engine::server::{chunk_generator::ThreadlocalDimensionSchema, constants::{BIOME_SAMPLE_POINT_AMOUNT, CHUNK_BLOCK_COUNT, CHUNK_SIZE}, noise::noise_util::{get_chunk_seed, interpolate_idw}};
+use crate::engine::server::{chunk_generator::ThreadlocalDimensionSchema, constants::{BIOME_SAMPLE_POINT_AMOUNT, CELLULAR_NINDEX, CHUNK_BLOCK_COUNT, CHUNK_SIZE, CONTINENTAL_NINDEX, GRIDLIKE_NINDEX, HILLY_NINDEX, MOUNTAINOUS_NINDEX, TEXTURE_NINDEX}, noise::noise_util::{get_chunk_seed, interpolate_idw}};
 
 pub struct CPUNoise {
     biome_sampling_noise: FastNoiseLite,
@@ -18,6 +18,7 @@ pub struct CPUNoise {
 
 impl CPUNoise {
     pub fn new(world_seed: i32) -> CPUNoise {
+        let mut rng = Rng::with_seed(world_seed as u64);
         let mut biome_sampling_noise = FastNoiseLite::with_seed(world_seed * -1);
         biome_sampling_noise.set_frequency(Some(0.001));
         biome_sampling_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
@@ -26,7 +27,7 @@ impl CPUNoise {
         continental_noise.set_frequency(Some(0.001));
         continental_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
         
-        let mut mountainous_noise = FastNoiseLite::with_seed(world_seed);
+        let mut mountainous_noise = FastNoiseLite::with_seed(rng.i32(..));
         mountainous_noise.set_frequency(Some(0.01));
         mountainous_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
         mountainous_noise.set_fractal_type(Some(FractalType::Ridged));
@@ -35,7 +36,7 @@ impl CPUNoise {
         mountainous_noise.set_fractal_gain(Some(1.16));
         mountainous_noise.set_fractal_weighted_strength(Some(0.84));
         
-        let mut hilly_noise = FastNoiseLite::with_seed(world_seed);
+        let mut hilly_noise = FastNoiseLite::with_seed(rng.i32(..));
         hilly_noise.set_frequency(Some(0.03));
         hilly_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
         hilly_noise.set_fractal_type(Some(FractalType::FBm));
@@ -44,7 +45,7 @@ impl CPUNoise {
         hilly_noise.set_fractal_gain(Some(1.39));
         hilly_noise.set_fractal_weighted_strength(Some(0.47));
 
-        let mut texture_noise = FastNoiseLite::with_seed(world_seed);
+        let mut texture_noise = FastNoiseLite::with_seed(rng.i32(..));
         texture_noise.set_frequency(Some(0.1));
         texture_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
         texture_noise.set_fractal_type(Some(FractalType::FBm));
@@ -53,7 +54,7 @@ impl CPUNoise {
         texture_noise.set_fractal_gain(Some(0.43));
         texture_noise.set_fractal_weighted_strength(Some(0.32));
 
-        let mut cellular_noise = FastNoiseLite::with_seed(world_seed);
+        let mut cellular_noise = FastNoiseLite::with_seed(rng.i32(..));
         cellular_noise.set_frequency(Some(0.05));
         cellular_noise.set_noise_type(Some(NoiseType::Cellular));
         cellular_noise.set_cellular_return_type(Some(CellularReturnType::Distance2Add));
@@ -63,7 +64,7 @@ impl CPUNoise {
         cellular_noise.set_fractal_gain(Some(0.37));
         cellular_noise.set_fractal_weighted_strength(Some(0.01));
 
-        let mut gridlike_noise = FastNoiseLite::with_seed(world_seed);
+        let mut gridlike_noise = FastNoiseLite::with_seed(rng.i32(..));
         gridlike_noise.set_frequency(Some(0.05));
         gridlike_noise.set_noise_type(Some(NoiseType::Value));
         gridlike_noise.set_fractal_type(Some(FractalType::FBm));
@@ -80,6 +81,18 @@ impl CPUNoise {
             texture_noise,
             cellular_noise,
             gridlike_noise,
+        }
+    }
+
+    pub fn get_noise_layer_by_index(&self, index: usize) -> &FastNoiseLite {
+        match index {
+            CONTINENTAL_NINDEX => &self.continental_noise,
+            MOUNTAINOUS_NINDEX => &self.mountainous_noise,
+            HILLY_NINDEX => &self.hilly_noise,
+            TEXTURE_NINDEX => &self.texture_noise,
+            CELLULAR_NINDEX => &self.cellular_noise,
+            GRIDLIKE_NINDEX => &self.gridlike_noise,
+            _ => panic!("Invalid noise layer index")
         }
     }
 

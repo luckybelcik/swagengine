@@ -42,7 +42,15 @@ impl NoiseSampler {
         self.cpu_noise.get_temperature_and_humidity_map(chunk_pos, world_seed, dimension_schema)
     }
 
-    pub fn get_noise_2d(x: f32, y: f32, noise_map_index: usize) -> f32 {
-        
+    pub fn get_noise_2d(&self, x: f32, y: f32, noise_layer_index: usize) -> f32 {
+        let noise = self.cpu_noise.get_noise_layer_by_index(noise_layer_index);
+
+        return noise.get_noise_2d(x, y);
+    }
+
+    pub fn get_noise_1d(&self, x: f32, noise_layer_index: usize) -> f32 {
+        let noise = self.cpu_noise.get_noise_layer_by_index(noise_layer_index);
+
+        return noise.get_noise_2d(x, 0.0);
     }
 }

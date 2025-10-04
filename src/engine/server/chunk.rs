@@ -208,7 +208,7 @@ fn get_terrain_heights(chunk_world_pos: &IVec2, biome_map: &BiomeMap, temperatur
             let mut j = 0;
 
             for config in current_biome_schema.iter() {
-                let generated_height = generator.get_noise_2d(world_x as f32, j as f32 * 250.0) * config.amplitude;
+                let generated_height = noise_sampler.get_noise_1d(world_x as f32, j) * config.amplitude;
                 height = apply_blending(height, generated_height, &config.blending_mode);
                 j += 1;
             }
