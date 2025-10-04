@@ -9,6 +9,10 @@ server = []
 gpu-server = []
 default = ["client", "server", "gpu-server"]
 
+[profile.dev]
+incremental = true
+opt-level = 0
+
 [dependencies]
 env_logger = "0.11"
 pollster = "0.4"
