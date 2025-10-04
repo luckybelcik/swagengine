@@ -41,4 +41,8 @@ impl NoiseSampler {
     -> ([u8; CHUNK_BLOCK_COUNT as usize], [u8; CHUNK_BLOCK_COUNT as usize]) {
         self.cpu_noise.get_temperature_and_humidity_map(chunk_pos, world_seed, dimension_schema)
     }
+
+    pub fn get_noise_2d(x: f32, y: f32, noise_map_index: usize) -> f32 {
+        
+    }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use fastnoise_lite::{FastNoiseLite, NoiseType};
+use fastnoise_lite::{CellularReturnType, FastNoiseLite, FractalType, NoiseType};
 use fastrand::Rng;
 use glam::IVec2;
 
@@ -8,16 +8,78 @@ use crate::engine::server::{chunk_generator::ThreadlocalDimensionSchema, constan
 
 pub struct CPUNoise {
     biome_sampling_noise: FastNoiseLite,
+    continental_noise: FastNoiseLite,
+    mountainous_noise: FastNoiseLite,
+    hilly_noise: FastNoiseLite,
+    texture_noise: FastNoiseLite,
+    cellular_noise: FastNoiseLite,
+    gridlike_noise: FastNoiseLite,
 }
 
 impl CPUNoise {
     pub fn new(world_seed: i32) -> CPUNoise {
         let mut biome_sampling_noise = FastNoiseLite::with_seed(world_seed * -1);
-        biome_sampling_noise.set_frequency(Some(0.0001));
+        biome_sampling_noise.set_frequency(Some(0.001));
         biome_sampling_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
+
+        let mut continental_noise = FastNoiseLite::with_seed(world_seed);
+        continental_noise.set_frequency(Some(0.001));
+        continental_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
+        
+        let mut mountainous_noise = FastNoiseLite::with_seed(world_seed);
+        mountainous_noise.set_frequency(Some(0.01));
+        mountainous_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
+        mountainous_noise.set_fractal_type(Some(FractalType::Ridged));
+        mountainous_noise.set_fractal_octaves(Some(3));
+        mountainous_noise.set_fractal_lacunarity(Some(2.1));
+        mountainous_noise.set_fractal_gain(Some(1.16));
+        mountainous_noise.set_fractal_weighted_strength(Some(0.84));
+        
+        let mut hilly_noise = FastNoiseLite::with_seed(world_seed);
+        hilly_noise.set_frequency(Some(0.03));
+        hilly_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
+        hilly_noise.set_fractal_type(Some(FractalType::FBm));
+        hilly_noise.set_fractal_octaves(Some(3));
+        hilly_noise.set_fractal_lacunarity(Some(1.53));
+        hilly_noise.set_fractal_gain(Some(1.39));
+        hilly_noise.set_fractal_weighted_strength(Some(0.47));
+
+        let mut texture_noise = FastNoiseLite::with_seed(world_seed);
+        texture_noise.set_frequency(Some(0.1));
+        texture_noise.set_noise_type(Some(NoiseType::OpenSimplex2));
+        texture_noise.set_fractal_type(Some(FractalType::FBm));
+        texture_noise.set_fractal_octaves(Some(4));
+        texture_noise.set_fractal_lacunarity(Some(2.57));
+        texture_noise.set_fractal_gain(Some(0.43));
+        texture_noise.set_fractal_weighted_strength(Some(0.32));
+
+        let mut cellular_noise = FastNoiseLite::with_seed(world_seed);
+        cellular_noise.set_frequency(Some(0.05));
+        cellular_noise.set_noise_type(Some(NoiseType::Cellular));
+        cellular_noise.set_cellular_return_type(Some(CellularReturnType::Distance2Add));
+        cellular_noise.set_fractal_type(Some(FractalType::Ridged));
+        cellular_noise.set_fractal_octaves(Some(3));
+        cellular_noise.set_fractal_lacunarity(Some(2.35));
+        cellular_noise.set_fractal_gain(Some(0.37));
+        cellular_noise.set_fractal_weighted_strength(Some(0.01));
+
+        let mut gridlike_noise = FastNoiseLite::with_seed(world_seed);
+        gridlike_noise.set_frequency(Some(0.05));
+        gridlike_noise.set_noise_type(Some(NoiseType::Value));
+        gridlike_noise.set_fractal_type(Some(FractalType::FBm));
+        gridlike_noise.set_fractal_octaves(Some(3));
+        gridlike_noise.set_fractal_lacunarity(Some(3.03));
+        gridlike_noise.set_fractal_gain(Some(0.25));
+        gridlike_noise.set_fractal_weighted_strength(Some(0.07));
 
         CPUNoise {
             biome_sampling_noise,
+            continental_noise,
+            mountainous_noise,
+            hilly_noise,
+            texture_noise,
+            cellular_noise,
+            gridlike_noise,
         }
     }
 
