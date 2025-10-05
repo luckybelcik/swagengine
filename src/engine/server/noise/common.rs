@@ -21,6 +21,10 @@ impl NoiseLayer2D {
     pub fn read(&self, chunk_relative_pos: IVec2) -> u8 {
         return self.layer[chunk_relative_pos.y as usize * CHUNK_SIZE as usize + chunk_relative_pos.x as usize];
     }
+
+    pub fn read_index(&self, index: usize) -> u8 {
+        return self.layer[index];
+    }
 }
 
 #[derive(Clone, Copy)]

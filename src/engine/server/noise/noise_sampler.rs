@@ -50,11 +50,6 @@ impl NoiseSampler {
             cache_2d: std::array::from_fn(|_| DashMap::new()),
         };
     }
-
-    pub fn get_temperature_and_humidity_map(&self, chunk_pos: &IVec2)
-    -> ([u8; CHUNK_BLOCK_COUNT as usize], [u8; CHUNK_BLOCK_COUNT as usize]) {
-        self.cpu_noise.get_temperature_and_humidity_map(chunk_pos)
-    }
     
     pub fn get_noise_1d(&self, world_pos_x: i32, noise_layer_index: usize) -> f32 {
         let chunk_relative_pos_x = world_to_local_pos(world_pos_x);
@@ -135,5 +130,10 @@ impl NoiseSampler {
         };
 
         layer
+    }
+
+    fn get_temperature_and_humidity_map(&self, chunk_pos: &IVec2)
+    -> ([u8; CHUNK_BLOCK_COUNT as usize], [u8; CHUNK_BLOCK_COUNT as usize]) {
+        self.cpu_noise.get_temperature_and_humidity_map(chunk_pos)
     }
 }

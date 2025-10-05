@@ -3,7 +3,7 @@ use std::{collections::HashSet, sync::{Arc}};
 use fastrand::Rng;
 use glam::IVec2;
 
-use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::{BakedHeightsCache}, common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::{BiomeConfig, BiomeTypes, BlendingMode}, noise::{noise_sampler::{NoiseSampler}, noise_util::get_chunk_seed}}};
+use crate::engine::{common::{Block, ChunkMesh, ChunkRelativePos}, components::alive::{EntityID, PlayerID}, server::{biome::{Biome, BiomeMap}, chunk_generator::BakedHeightsCache, common::{BlockArray, BlockType, LayerType}, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE, HUMIDITY_INDEX, TEMPERATURE_INDEX}, data::schema_definitions::{BiomeConfig, BiomeTypes, BlendingMode}, noise::{noise_sampler::NoiseSampler, noise_util::get_chunk_seed}}};
 
 pub struct Chunk {
     pub foreground: BlockArray,
@@ -20,9 +20,8 @@ impl Chunk {
         let mut foreground = BlockArray::filled_basic_air();
         let chunk_world_pos = IVec2 { x: position.x * CHUNK_SIZE as i32, y: position.y * CHUNK_SIZE as i32 };
 
-        // Interpolate the values from those points into a chunk-sized map
-        let (temperature_map, humidity_map) =
-            noise_sampler.get_temperature_and_humidity_map(&chunk_world_pos);
+        let temperature_map = noise_sampler.get_noise_layer_2d(&chunk_world_pos, TEMPERATURE_INDEX);
+        let humidity_map = noise_sampler.get_noise_layer_2d(&chunk_world_pos, HUMIDITY_INDEX);
 
         // Get terrain height
         let heights: [f32; CHUNK_SIZE as usize] = get_terrain_heights(&chunk_world_pos, biome_map, &temperature_map, &humidity_map, noise_sampler, heights_cache);
@@ -34,12 +33,12 @@ impl Chunk {
             let x = i % CHUNK_SIZE as usize;
             let y = i / CHUNK_SIZE as usize;
             let world_y = y as i32 + chunk_world_pos.y;
-            let blend_percentage = biome_map.get_blend_percentage(temperature_map[i], humidity_map[i]);
+            let blend_percentage = biome_map.get_blend_percentage(temperature_map.read_index(i), humidity_map.read_index(i));
 
             let biome_to_use = if block_picker_rng.u8(0..100) < blend_percentage {
-                biome_map.get_best_biome(temperature_map[i], humidity_map[i])
+                biome_map.get_best_biome(temperature_map.read_index(i), humidity_map.read_index(i))
             } else {
-                biome_map.get_second_best_biome(temperature_map[i], humidity_map[i])
+                biome_map.get_second_best_biome(temperature_map.read_index(i), humidity_map.read_index(i))
             };
 
             if generate_block_id(heights[x as usize], world_y as f32, i, &mut foreground,
