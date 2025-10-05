@@ -1,4 +1,5 @@
 use bincode::{Encode, Decode};
+use glam::IVec2;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{common::ChunkRelativePos, server::{constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}}};
@@ -94,4 +95,24 @@ pub enum LayerType {
     Foreground,
     Middleground,
     Background
+}
+
+pub fn world_to_local_pos_2d(world_pos: IVec2) -> IVec2 {
+    let remainder = world_pos % CHUNK_SIZE as i32;
+    let shifted = remainder + CHUNK_SIZE as i32;
+    shifted % CHUNK_SIZE as i32
+}
+
+pub fn world_to_chunk_pos_2d(world_pos: IVec2) -> IVec2 {
+    world_pos.div_euclid(IVec2 { x: CHUNK_SIZE as i32, y: CHUNK_SIZE as i32 })
+}
+
+pub fn world_to_local_pos(world_pos: i32) -> i32 {
+    let remainder = world_pos % CHUNK_SIZE as i32;
+    let shifted = remainder + CHUNK_SIZE as i32;
+    shifted % CHUNK_SIZE as i32
+}
+
+pub fn world_to_chunk_pos(world_pos: i32) -> i32 {
+    world_pos.div_euclid(CHUNK_SIZE as i32)
 }
