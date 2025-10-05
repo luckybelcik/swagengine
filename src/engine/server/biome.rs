@@ -1,4 +1,4 @@
-use crate::engine::server::{constants::{BIOME_IDW_POWER, BIOME_MAP_GRID_SIZE, BIOME_TRANSITION_THRESHOLD, CELLULAR_NINDEX, CONTINENTAL_NINDEX, GRIDLIKE_NINDEX, HILLY_NINDEX, MOUNTAINOUS_NINDEX, NUM_NOISE_LAYERS, TEXTURE_NINDEX}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig}};
+use crate::engine::server::{constants::{BIOME_IDW_POWER, BIOME_MAP_GRID_SIZE, BIOME_TRANSITION_THRESHOLD, CELLULAR_NINDEX, CONTINENTAL_NINDEX, GRIDLIKE_NINDEX, HILLY_NINDEX, MOUNTAINOUS_NINDEX, NUM_1D_NOISE_LAYERS, TEXTURE_NINDEX}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig}};
 
 pub struct BiomeRegistry {
     pub biomes: Box<[Biome]>,
@@ -139,7 +139,7 @@ pub struct Biome {
 impl Biome {
     pub fn from_schema(schema: BiomeSchema) -> Self {
         let empty_config = NoiseConfig { amplitude: 0.0, weight: 0.0, blending_mode: super::data::schema_definitions::BlendingMode::Add };
-        let mut noise_schema: [NoiseConfig; NUM_NOISE_LAYERS] = [empty_config; NUM_NOISE_LAYERS];
+        let mut noise_schema: [NoiseConfig; NUM_1D_NOISE_LAYERS] = [empty_config; NUM_1D_NOISE_LAYERS];
         noise_schema[CONTINENTAL_NINDEX] = schema.noise_functions.continental;
         noise_schema[MOUNTAINOUS_NINDEX] = schema.noise_functions.mountainous;
         noise_schema[HILLY_NINDEX] = schema.noise_functions.hilly;

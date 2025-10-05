@@ -16,7 +16,10 @@ pub const HILLY_NINDEX: usize = 2;
 pub const TEXTURE_NINDEX: usize = 3;
 pub const CELLULAR_NINDEX: usize = 4;
 pub const GRIDLIKE_NINDEX: usize = 5;
-//
-pub const NUM_NOISE_LAYERS: usize = 6;
+pub const NUM_1D_NOISE_LAYERS: usize = 6;
+
+pub const TEMPERATURE_INDEX: usize = 0;
+pub const HUMIDITY_INDEX: usize = 1;
+pub const NUM_2D_NOISE_LAYERS: usize = 2;
 
 pub const TICK_RATE: u64 = 60;
