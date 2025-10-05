@@ -29,7 +29,7 @@ impl ChunkGenerator {
         let arc_dimension = Arc::new(dimension_schema);
         let thread_dimension = arc_dimension.clone();
 
-        let arc_noise_sampler = Arc::new(pollster::block_on(NoiseSampler::new(dimension_seed)));
+        let arc_noise_sampler = Arc::new(pollster::block_on(NoiseSampler::new(dimension_seed, thread_dimension)));
         let thread_noise_sampler = arc_noise_sampler.clone();
 
         std::thread::spawn(move || {
@@ -60,13 +60,13 @@ impl ChunkGenerator {
                                 .map(|&coords| {
                                     let registry_guard = thread_registry.read().unwrap();
                                     let biome_map = &registry_guard.biome_map; 
-                                    (coords, Chunk::generate_chunk(&coords, biome_map, &thread_dimension, &thread_heights_cache, &thread_noise_sampler, dimension_seed))
+                                    (coords, Chunk::generate_chunk(&coords, biome_map, &thread_heights_cache, &thread_noise_sampler, dimension_seed))
                                 }).collect()
                         } else {
                             println!("Processing small batch of {} chunks sequentially.", batch_size);
                             let registry_guard = thread_registry.read().unwrap();
                             let biome_map = &registry_guard.biome_map; 
-                            batch.into_iter().map(|coords| (coords, Chunk::generate_chunk(&coords, &biome_map, &thread_dimension, &thread_heights_cache, &thread_noise_sampler, dimension_seed))).collect()
+                            batch.into_iter().map(|coords| (coords, Chunk::generate_chunk(&coords, &biome_map, &thread_heights_cache, &thread_noise_sampler, dimension_seed))).collect()
                         };
 
                         for (pos, chunk) in generated_chunks {
@@ -82,7 +82,7 @@ impl ChunkGenerator {
                         let biome_map = &registry_guard.biome_map; 
 
                         while chunks_generated < chunk_limit {
-                            let _: Chunk = Chunk::generate_chunk(&chunk_pos, &biome_map, &thread_dimension, &thread_heights_cache, &thread_noise_sampler, dimension_seed); 
+                            let _: Chunk = Chunk::generate_chunk(&chunk_pos, &biome_map, &thread_heights_cache, &thread_noise_sampler, dimension_seed); 
                             chunks_generated += 1;
 
                             chunk_pos.x += 1;
