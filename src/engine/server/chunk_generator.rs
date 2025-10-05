@@ -1,13 +1,11 @@
 use std::{collections::HashSet, sync::{mpsc::{Receiver, Sender}, Arc, RwLock}, time::{Instant}};
 
-use dashmap::DashMap;
 use glam::IVec2;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 
-use crate::engine::server::{biome::BiomeRegistry, chunk::Chunk, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::DimensionSchema, noise::noise_sampler::NoiseSampler};
+use crate::engine::server::{biome::BiomeRegistry, chunk::Chunk, constants::{CHUNK_BLOCK_COUNT}, data::schema_definitions::DimensionSchema, noise::noise_sampler::NoiseSampler};
 
-pub type BakedHeightsCache = Arc<DashMap<i32, [f32; CHUNK_SIZE as usize]>>;
 pub type ThreadlocalDimensionSchema = Arc<DimensionSchema>;
 
 pub struct ChunkGenerator {

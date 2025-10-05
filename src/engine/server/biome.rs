@@ -1,4 +1,4 @@
-use crate::engine::server::{constants::{BIOME_IDW_POWER, BIOME_MAP_GRID_SIZE, BIOME_TRANSITION_THRESHOLD, CELLULAR_NINDEX, CONTINENTAL_NINDEX, GRIDLIKE_NINDEX, HILLY_NINDEX, MOUNTAINOUS_NINDEX, NUM_1D_NOISE_LAYERS, TEXTURE_NINDEX}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig}};
+use crate::engine::server::{constants::{BIOME_MAP_GRID_SIZE, CELLULAR_NINDEX, CONTINENTAL_NINDEX, GRIDLIKE_NINDEX, HILLY_NINDEX, MOUNTAINOUS_NINDEX, NUM_1D_NOISE_LAYERS, TEXTURE_NINDEX}, data::schema_definitions::{BiomeConfig, BiomeSchema, NoiseConfig}};
 
 pub struct BiomeRegistry {
     pub biomes: Box<[Biome]>,
@@ -28,14 +28,14 @@ impl BiomeRegistry {
 }
 
 pub struct BiomeMap<'a> {
-    pub map: [(&'a Biome, &'a Biome, u8); 10000],
+    pub map: [(&'a Biome, &'a Biome); 10000],
 }
 
 impl<'a> BiomeMap<'a> {
     pub fn populate_biome_map(loaded_biomes: &'a [Biome]) -> BiomeMap<'a> {
         let default_biome = loaded_biomes.get(0).expect("loaded_biomes cannot be empty");
-        let mut biome_lookup: [(&'a Biome, &'a Biome, u8); (BIOME_MAP_GRID_SIZE * BIOME_MAP_GRID_SIZE) as usize] =
-            [(default_biome, default_biome, 100); (BIOME_MAP_GRID_SIZE * BIOME_MAP_GRID_SIZE) as usize];
+        let mut biome_lookup: [(&'a Biome, &'a Biome); (BIOME_MAP_GRID_SIZE * BIOME_MAP_GRID_SIZE) as usize] =
+            [(default_biome, default_biome); (BIOME_MAP_GRID_SIZE * BIOME_MAP_GRID_SIZE) as usize];
 
         for x in 0..BIOME_MAP_GRID_SIZE {
             for y in 0..BIOME_MAP_GRID_SIZE {
@@ -77,26 +77,9 @@ impl<'a> BiomeMap<'a> {
                     }
                 }
 
-                let d_a = min_distance_sq.sqrt();
-                let d_b = second_min_distance_sq.sqrt();
-                
-                let blend_percentage = if d_a < BIOME_TRANSITION_THRESHOLD && d_b > BIOME_TRANSITION_THRESHOLD {
-                    100 
-                } else if second_min_distance_sq == f64::MAX || d_a.abs() < 0.001 { 
-                    100 
-                } else {
-                    let inv_influence_a = 1.0 / d_a.powf(BIOME_IDW_POWER).max(f64::EPSILON);
-                    let inv_influence_b = 1.0 / d_b.powf(BIOME_IDW_POWER).max(f64::EPSILON);
-
-                    let total_influence = inv_influence_a + inv_influence_b;
-
-                    let ratio_a = inv_influence_a / total_influence;
-                    (ratio_a * 100.0).round().clamp(0.0, 100.0) as u8
-                };
-
                 let index = (y * BIOME_MAP_GRID_SIZE + x) as usize;
             
-                biome_lookup[index] = (closest_biome, second_closest_biome, blend_percentage);
+                biome_lookup[index] = (closest_biome, second_closest_biome);
             }
         }
 
@@ -119,15 +102,6 @@ impl<'a> BiomeMap<'a> {
         let index = y * BIOME_MAP_GRID_SIZE as usize + x;
         
         self.map[index].1
-    }
-
-    pub fn get_blend_percentage(&self, temperature: u8, humidity: u8) -> u8 {
-        let x = temperature.clamp(0, BIOME_MAP_GRID_SIZE as u8 - 1) as usize;
-        let y = humidity.clamp(0, BIOME_MAP_GRID_SIZE as u8 - 1) as usize;
-    
-        let index = y * BIOME_MAP_GRID_SIZE as usize + x;
-        
-        self.map[index].2
     }
 }
 

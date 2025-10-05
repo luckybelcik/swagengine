@@ -182,6 +182,9 @@ impl CPUNoise {
         } else {
             (0.0, 0.0)
         };
+        
+        let half_world_size_x = full_world_size_x / 2.0;
+        let half_world_size_y = full_world_size_y / 2.0;
 
         for i in 0..CHUNK_BLOCK_COUNT as usize {
             let x = i % CHUNK_SIZE as usize;
@@ -190,19 +193,16 @@ impl CPUNoise {
             let world_x = x as f32 + chunk_world_pos.x as f32;
             let world_y = y as f32 + chunk_world_pos.y as f32;
 
-            let half_world_size_x = full_world_size_x / 2.0;
-            let half_world_size_y = full_world_size_y / 2.0;
-
             let relative_x = (world_x + half_world_size_x) / full_world_size_x;
 
             let horizontal_bias: f32 = if full_world_size_x > 0.0 {
                 if relative_x < 1.0 / 3.0 {
                     // Left third: Colder
-                    let bias_factor = 1.0 - (relative_x * 3.0); 
+                    let bias_factor = 1.0 - (relative_x * 3.0);
                     bias_factor * horiz_var
                 } else if relative_x >= 2.0 / 3.0 {
                     // Right third: Warmer
-                    let bias_factor = (relative_x * 3.0) - 2.0; 
+                    let bias_factor = (relative_x * 3.0) - 2.0;
                     -bias_factor * horiz_var
                 } else {
                     // Middle third: Neutral

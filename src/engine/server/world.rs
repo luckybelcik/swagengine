@@ -48,8 +48,8 @@ impl Dimension {
     }
 
     pub fn load_chunks(&mut self) {
-        let generated_height = 5;
-        let generated_width = 5;
+        let generated_height = 10;
+        let generated_width = 100;
 
         let half_height = generated_height / 2;
         let half_width = generated_width / 2;
