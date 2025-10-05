@@ -7,7 +7,7 @@ edition = "2024"
 client = []
 server = []
 gpu-server = []
-default = ["client", "server", "gpu-server"]
+default = ["client", "server"]
 
 [profile.dev]
 incremental = true

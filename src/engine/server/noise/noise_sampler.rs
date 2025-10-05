@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
+#[cfg(feature = "gpu-server")]
+use crate::engine::server::noise::gpu_noise;
 use glam::IVec2;
-
-use crate::engine::server::{constants::CHUNK_BLOCK_COUNT, data::schema_definitions::DimensionSchema, noise::cpu_noise::CPUNoise};
+use crate::engine::server::{noise::cpu_noise::CPUNoise};
+use crate::engine::server::{constants::CHUNK_BLOCK_COUNT, data::schema_definitions::DimensionSchema};
 
 #[cfg(feature = "gpu-server")]
 use crate::engine::server::noise::{gpu_noise::GPUNoise};
