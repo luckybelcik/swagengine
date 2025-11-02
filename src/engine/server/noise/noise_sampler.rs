@@ -41,6 +41,8 @@ impl NoiseSampler {
         return NoiseSampler {
             cpu_noise,
             gpu_noise,
+            cache_1d: std::array::from_fn(|_| DashMap::new()),
+            cache_2d: std::array::from_fn(|_| DashMap::new()),
         };
 
         #[cfg(not(feature = "gpu-server"))]

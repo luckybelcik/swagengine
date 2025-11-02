@@ -20,4 +20,11 @@ pub const TEMPERATURE_INDEX: usize = 0;
 pub const HUMIDITY_INDEX: usize = 1;
 pub const NUM_2D_NOISE_LAYERS: usize = 2;
 
+pub const PARALLEL_CHUNKGEN_THRESHOLD: usize = 4;
+
+#[cfg(not(feature = "gpu-server"))]
+pub const GPU_CHUNKGEN_THRESHOLD: usize = usize::MAX;
+#[cfg(feature = "gpu-server")]
+pub const GPU_CHUNKGEN_THRESHOLD: usize = 16;
+
 pub const TICK_RATE: u64 = 60;
