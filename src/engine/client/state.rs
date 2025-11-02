@@ -1,9 +1,6 @@
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
-use winit::
-    window::Window
-;
+use winit::window::Window;
 
 use crate::engine::{client::{client::Client, client_chunk::ClientChunk}, server::constants::CHUNK_BLOCK_COUNT};
 

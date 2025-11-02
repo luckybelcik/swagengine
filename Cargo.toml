@@ -6,7 +6,12 @@ edition = "2024"
 [features]
 client = []
 server = []
+gpu-server = []
 default = ["client", "server"]
+
+[profile.dev]
+incremental = true
+opt-level = 0
 
 [dependencies]
 env_logger = "0.11"

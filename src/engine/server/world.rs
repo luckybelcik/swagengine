@@ -29,7 +29,7 @@ impl Dimension {
         }
 
         let biome_schemas = biomes_result.unwrap();
-        let biome_registry = BiomeRegistry::new(biome_schemas, seed);
+        let biome_registry = BiomeRegistry::new(biome_schemas);
         let (chunk_generator, chunk_receiver) = ChunkGenerator::new(biome_registry, schema.clone(), seed);
 
         Dimension { 
@@ -48,8 +48,8 @@ impl Dimension {
     }
 
     pub fn load_chunks(&mut self) {
-        let generated_height = 8;
-        let generated_width = 150;
+        let generated_height = 10;
+        let generated_width = 100;
 
         let half_height = generated_height / 2;
         let half_width = generated_width / 2;

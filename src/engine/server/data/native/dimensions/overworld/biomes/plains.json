@@ -7,22 +7,36 @@
         "subsurface_block": 1,
         "base_block": 0
     },
-    "noise_functions": [
-        {
-            "frequency": 0.0001,
+    "noise_functions": {
+        "continental": {
             "amplitude": 20.0,
-            "noise_type": "OpenSimplex2",
-            "fbm": null,
-            "blending_mode": "Mix",
-            "sparse": null
+            "weight": 2.0,
+            "blending_mode": "Add"
         },
-        {
-            "frequency": 0.003,
-            "amplitude": 5.0,
-            "noise_type": "OpenSimplex2",
-            "fbm": null,
-            "blending_mode": "Mix",
-            "sparse": null
+        "mountainous": {
+            "amplitude": 0.0,
+            "weight": 0.0,
+            "blending_mode": "Mix"
+        },
+        "hilly": {
+            "amplitude": 10.0,
+            "weight": 2.0,
+            "blending_mode": "Mix"
+        },
+        "texture": {
+            "amplitude": 2.0,
+            "weight": 2.0,
+            "blending_mode": "Mix"
+        },
+        "cellular": {
+            "amplitude": 0.0,
+            "weight": 0,
+            "blending_mode": "Mix"
+        },
+        "gridlike": {
+            "amplitude": 0.0,
+            "weight": 0.0,
+            "blending_mode": "Mix"
         }
-    ]
+    }
 }

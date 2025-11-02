@@ -1,14 +1,11 @@
 use std::{collections::HashSet, sync::{mpsc::{Receiver, Sender}, Arc, RwLock}, time::{Instant}};
 
-use dashmap::DashMap;
-use fastnoise_lite::FastNoiseLite;
 use glam::IVec2;
-use rayon::iter::IntoParallelRefIterator;
+use rayon::iter::{IntoParallelRefIterator};
 use rayon::iter::ParallelIterator;
 
-use crate::engine::server::{biome::BiomeRegistry, chunk::Chunk, constants::{CHUNK_BLOCK_COUNT, CHUNK_SIZE}, data::schema_definitions::DimensionSchema, world::Dimension};
+use crate::engine::server::{biome::BiomeRegistry, chunk::Chunk, constants::{CHUNK_BLOCK_COUNT, GPU_CHUNKGEN_THRESHOLD, PARALLEL_CHUNKGEN_THRESHOLD}, data::schema_definitions::DimensionSchema, noise::noise_sampler::NoiseSampler};
 
-pub type BakedHeightsCache = Arc<DashMap<i32, [f32; CHUNK_SIZE as usize]>>;
 pub type ThreadlocalDimensionSchema = Arc<DimensionSchema>;
 
 pub struct ChunkGenerator {
@@ -17,27 +14,21 @@ pub struct ChunkGenerator {
 }
 
 impl ChunkGenerator {
-    pub fn new(biome_registry: BiomeRegistry, dimension_schema: DimensionSchema, world_seed: i32) -> (ChunkGenerator, Receiver<(Chunk, IVec2)>) {
+    pub fn new(biome_registry: BiomeRegistry, dimension_schema: DimensionSchema, dimension_seed: i32) -> (ChunkGenerator, Receiver<(Chunk, IVec2)>) {
         let (generator_sender, generator_listener) = std::sync::mpsc::channel::<(Chunk, IVec2)>();
         let (chunkpos_sender, chunkpos_listener) = std::sync::mpsc::channel::<Generate>();
 
         let arc_registry = Arc::new(RwLock::new(biome_registry));
         let thread_registry = arc_registry.clone();
 
-        let arc_heights_cache = Arc::new(DashMap::<i32, [f32; CHUNK_SIZE as usize]>::new());
-        let thread_heights_cache = arc_heights_cache.clone();
-
         let arc_dimension = Arc::new(dimension_schema);
         let thread_dimension = arc_dimension.clone();
 
-        let mut noise = FastNoiseLite::with_seed(world_seed * -1);
-        noise.set_frequency(Some(0.0001));
-        let arc_generic_noise = Arc::new(noise);
-        let thread_generic_noise = arc_generic_noise.clone();
+        let arc_noise_sampler = Arc::new(pollster::block_on(NoiseSampler::new(dimension_seed, thread_dimension)));
+        let thread_noise_sampler = arc_noise_sampler.clone();
 
         std::thread::spawn(move || {
             println!("Chunk generator thread spawned");
-            const PARALLEL_THRESHOLD: usize = 4;
 
             loop {
                 let command = match chunkpos_listener.recv() {
@@ -57,19 +48,34 @@ impl ChunkGenerator {
 
                         let batch_size = batch.len();
 
-                        let generated_chunks: Vec<(IVec2, Chunk)> = if batch_size >= PARALLEL_THRESHOLD {
-                            println!("Processing large batch of {} chunks in parallel.", batch_size);
-                            batch.par_iter()
-                                .map(|&coords| {
-                                    let registry_guard = thread_registry.read().unwrap();
-                                    let biome_map = &registry_guard.biome_map; 
-                                    (coords, Chunk::generate_chunk(&coords, biome_map, &thread_dimension, &thread_heights_cache, &thread_generic_noise, world_seed))
-                                }).collect()
-                        } else {
-                            println!("Processing small batch of {} chunks sequentially.", batch_size);
+                        let generated_chunks: Vec<(IVec2, Chunk)> = {
+                            let mut chunks: Vec<(IVec2, Chunk)> = Vec::new();
+
                             let registry_guard = thread_registry.read().unwrap();
                             let biome_map = &registry_guard.biome_map; 
-                            batch.into_iter().map(|coords| (coords, Chunk::generate_chunk(&coords, &biome_map, &thread_dimension, &thread_heights_cache, &thread_generic_noise, world_seed))).collect()
+
+                            // Use GPU generation if enabled
+                            #[cfg(feature = "gpu-server")]
+                            if batch_size >= GPU_CHUNKGEN_THRESHOLD {
+                                println!("Processing huge batch of {} chunks on the GPU.", batch_size);
+                                todo!("GPU Noise generation not implemented yet!");
+                            }
+
+                            // Use multithreaded generation is batch size big enough
+                            if batch_size >= PARALLEL_CHUNKGEN_THRESHOLD {
+                                println!("Processing large batch of {} chunks in parallel.", batch_size);
+                                chunks = batch.par_iter()
+                                    .map(|&coords| (coords, Chunk::generate_chunk(&coords, biome_map, &thread_noise_sampler, dimension_seed))).collect();
+                            }
+
+                            // Fallback - simple sequential generation
+                            if batch_size < PARALLEL_CHUNKGEN_THRESHOLD {
+                                println!("Processing small batch of {} chunks sequentially.", batch_size);
+                                chunks = batch.into_iter()
+                                    .map(|coords| (coords, Chunk::generate_chunk(&coords, &biome_map, &thread_noise_sampler, dimension_seed))).collect();
+                            }
+
+                            chunks
                         };
 
                         for (pos, chunk) in generated_chunks {
@@ -85,7 +91,7 @@ impl ChunkGenerator {
                         let biome_map = &registry_guard.biome_map; 
 
                         while chunks_generated < chunk_limit {
-                            let _: Chunk = Chunk::generate_chunk(&chunk_pos, &biome_map, &thread_dimension, &thread_heights_cache, &thread_generic_noise, world_seed); 
+                            let _: Chunk = Chunk::generate_chunk(&chunk_pos, &biome_map, &thread_noise_sampler, dimension_seed); 
                             chunks_generated += 1;
 
                             chunk_pos.x += 1;
