@@ -21,6 +21,8 @@ use crate::engine::server::noise::{gpu_noise::GPUNoise};
 pub struct NoiseSampler {
     cpu_noise: CPUNoise,
     gpu_noise: GPUNoise,
+    cache_1d: [DashMap<i32, NoiseLayer1D>; NUM_1D_NOISE_LAYERS],
+    cache_2d: [DashMap<IVec2, NoiseLayer2D>; NUM_2D_NOISE_LAYERS], 
 }
 
 #[cfg(not(feature = "gpu-server"))]
